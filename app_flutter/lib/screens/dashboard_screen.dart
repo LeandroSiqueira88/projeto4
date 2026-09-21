@@ -22,8 +22,13 @@ class DashboardScreen extends StatelessWidget {
           return const Center(child: CircularProgressIndicator());
         }
 
-        final maquinas = snap.data!;
-        if (maquinas.isEmpty) return const _Vazio();
+        // Maquinas baixadas ficam fora dos indicadores: o painel mostra o
+        // parque vigente, nao o historico de patrimonio. Elas continuam
+        // acessiveis pelo filtro "Baixadas" no inventario.
+        final todas = snap.data!;
+        final maquinas = todas.where((m) => !m.baixada).toList();
+        final baixadas = todas.length - maquinas.length;
+        if (todas.isEmpty) return const _Vazio();
 
         final criticas =
             maquinas.where((m) => m.faixa == FaixaRisco.critico).toList()
@@ -50,6 +55,13 @@ class DashboardScreen extends StatelessWidget {
             children: [
               const Text('Visao geral do parque',
                   style: TextStyle(fontSize: 21, fontWeight: FontWeight.w700)),
+              if (baixadas > 0) ...[
+                const SizedBox(height: 3),
+                Text(
+                    '$baixadas ${baixadas == 1 ? "maquina baixada nao contabilizada" : "maquinas baixadas nao contabilizadas"}',
+                    style: const TextStyle(
+                        fontSize: 12, color: Color(0xFF8A8F98))),
+              ],
               const SizedBox(height: 16),
 
               GridView.builder(
@@ -58,7 +70,7 @@ class DashboardScreen extends StatelessWidget {
                 itemCount: 4,
                 gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: colunas,
-                  mainAxisExtent: 84, // altura fixa do cartao
+                  mainAxisExtent: 74, // altura fixa do cartao
                   mainAxisSpacing: 12,
                   crossAxisSpacing: 12,
                 ),
@@ -123,7 +135,7 @@ class DashboardScreen extends StatelessWidget {
                         title: Text(m.serialBios,
                             style:
                                 const TextStyle(fontWeight: FontWeight.w600)),
-                        subtitle: Text('${m.escola} - ${m.sala}\n'
+                        subtitle: Text('${m.escolaTexto} - ${m.salaTexto}\n'
                             '${m.modeloDisco} ${m.capacidadeTexto}'),
                         isThreeLine: true,
                         trailing: RiscoBadge(maquina: m),

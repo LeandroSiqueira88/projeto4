@@ -3,9 +3,11 @@ import 'package:flutter/material.dart';
 
 import '../models/maquina.dart';
 import '../services/firestore_service.dart';
+import '../utils/formato.dart';
+import '../widgets/dialogo_baixa.dart';
+import '../widgets/dialogo_localizacao.dart';
 import '../widgets/risco_badge.dart';
 
-/// Nomes legiveis dos atributos SMART - o tecnico nao decora numero de atributo.
 const _rotulosSmart = {
   'smart_5_raw': 'Setores realocados',
   'smart_9_raw': 'Horas ligado',
@@ -18,8 +20,6 @@ const _rotulosSmart = {
   'smart_199_raw': 'Erros CRC (cabo)',
 };
 
-/// Atributos cujo valor diferente de zero merece destaque visual.
-/// Horas ligado, ciclos e temperatura sao informativos, nao sintomas.
 const _sintomas = {
   'smart_5_raw', 'smart_187_raw', 'smart_197_raw', 'smart_198_raw',
 };
@@ -30,12 +30,160 @@ class FichaScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cor = CoresRisco.de(maquina.faixa);
     final servico = FirestoreService();
 
+    return StreamBuilder<Maquina?>(
+      stream: servico.maquina(maquina.serialBios),
+      initialData: maquina,
+      builder: (context, snap) {
+        // Documento apagado enquanto a tela estava aberta (exclusao
+        // definitiva feita aqui ou por outro usuario).
+        if (snap.hasData && snap.data == null) {
+          return Scaffold(
+            appBar: AppBar(title: Text(maquina.serialBios)),
+            body: const Center(
+              child: Padding(
+                padding: EdgeInsets.all(30),
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  Icon(Icons.delete_outline,
+                      size: 48, color: Color(0xFF8A8F98)),
+                  SizedBox(height: 14),
+                  Text('Este registro foi excluido.',
+                      style: TextStyle(fontSize: 16)),
+                ]),
+              ),
+            ),
+          );
+        }
+        return _Conteudo(maquina: snap.data ?? maquina, servico: servico);
+      },
+    );
+  }
+}
+
+class _Conteudo extends StatelessWidget {
+  final Maquina maquina;
+  final FirestoreService servico;
+
+  const _Conteudo({required this.maquina, required this.servico});
+
+  void _aviso(BuildContext context, String texto) {
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(texto)));
+  }
+
+  Future<void> _editarLocalizacao(BuildContext context) async {
+    final salvou = await abrirDialogoLocalizacao(
+      context,
+      maquina: maquina,
+      cadastrando: maquina.emQuarentena,
+    );
+    if (salvou && context.mounted) _aviso(context, 'Localizacao atualizada.');
+  }
+
+  Future<void> _darBaixa(BuildContext context) async {
+    final ok = await abrirDialogoBaixa(context, maquina);
+    if (ok && context.mounted) _aviso(context, 'Baixa registrada.');
+  }
+
+  Future<void> _reativar(BuildContext context) async {
+    await servico.reativar(maquina.serialBios);
+    if (context.mounted) _aviso(context, 'Maquina reativada.');
+  }
+
+  Future<void> _excluir(BuildContext context) async {
+    final ok = await abrirDialogoExclusao(context, maquina);
+    if (ok && context.mounted) {
+      _aviso(context, 'Registro excluido.');
+      Navigator.pop(context);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cor = CoresRisco.de(maquina.faixa);
+    final antiga = leituraAntiga(maquina.atualizadoEm);
+
     return Scaffold(
-      appBar: AppBar(title: Text(maquina.serialBios)),
+      appBar: AppBar(
+        title: Text(maquina.serialBios),
+        actions: [
+          if (!maquina.baixada)
+            IconButton(
+              icon: const Icon(Icons.edit_location_alt_outlined),
+              tooltip: 'Alterar localizacao',
+              onPressed: () => _editarLocalizacao(context),
+            ),
+          PopupMenuButton<String>(
+            tooltip: 'Mais acoes',
+            onSelected: (opcao) {
+              switch (opcao) {
+                case 'baixa':
+                  _darBaixa(context);
+                case 'reativar':
+                  _reativar(context);
+                case 'quarentena':
+                  servico.devolverParaQuarentena(maquina.serialBios);
+                case 'excluir':
+                  _excluir(context);
+              }
+            },
+            itemBuilder: (_) => [
+              if (!maquina.baixada)
+                const PopupMenuItem(
+                  value: 'baixa',
+                  child: ListTile(
+                    leading: Icon(Icons.archive_outlined),
+                    title: Text('Dar baixa'),
+                    subtitle: Text('Preserva o historico',
+                        style: TextStyle(fontSize: 11)),
+                    contentPadding: EdgeInsets.zero,
+                    dense: true,
+                  ),
+                ),
+              if (maquina.baixada)
+                const PopupMenuItem(
+                  value: 'reativar',
+                  child: ListTile(
+                    leading: Icon(Icons.unarchive_outlined),
+                    title: Text('Reativar'),
+                    contentPadding: EdgeInsets.zero,
+                    dense: true,
+                  ),
+                ),
+              if (maquina.ativa)
+                const PopupMenuItem(
+                  value: 'quarentena',
+                  child: ListTile(
+                    leading: Icon(Icons.help_outline),
+                    title: Text('Voltar para quarentena'),
+                    contentPadding: EdgeInsets.zero,
+                    dense: true,
+                  ),
+                ),
+              const PopupMenuDivider(),
+              PopupMenuItem(
+                value: 'excluir',
+                child: ListTile(
+                  leading: Icon(Icons.delete_forever_outlined,
+                      color: Theme.of(context).colorScheme.error),
+                  title: Text('Excluir definitivamente',
+                      style:
+                          TextStyle(color: Theme.of(context).colorScheme.error)),
+                  subtitle: const Text('Apaga tudo, sem volta',
+                      style: TextStyle(fontSize: 11)),
+                  contentPadding: EdgeInsets.zero,
+                  dense: true,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(width: 4),
+        ],
+      ),
       body: ListView(padding: const EdgeInsets.all(20), children: [
+        if (maquina.baixada) _FaixaBaixa(maquina: maquina),
+
         // ---- medidor de risco ----
         Container(
           padding: const EdgeInsets.all(22),
@@ -66,18 +214,64 @@ class FichaScreen extends StatelessWidget {
             ),
           ]),
         ),
+
+        if (antiga && !maquina.baixada) ...[
+          const SizedBox(height: 14),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: CoresRisco.atencao.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(9),
+            ),
+            child: Row(children: [
+              const Icon(Icons.schedule, size: 18, color: CoresRisco.atencao),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Ultima leitura ${formatarRelativo(maquina.atualizadoEm)}. '
+                  'A predicao pode estar desatualizada.',
+                  style: const TextStyle(
+                      fontSize: 12.5, color: CoresRisco.atencao),
+                ),
+              ),
+            ]),
+          ),
+        ],
+
         const SizedBox(height: 24),
 
-        _Secao(titulo: 'Localizacao', linhas: {
-          'Escola': maquina.escola,
-          'Sala': maquina.sala,
-          'Status': maquina.status,
-          'Ultima leitura': maquina.atualizadoEm
-                  ?.toLocal()
-                  .toString()
-                  .substring(0, 16) ??
-              '--',
-        }),
+        Row(children: [
+          const Text('Localizacao',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+          const Spacer(),
+          if (!maquina.baixada)
+            TextButton.icon(
+              onPressed: () => _editarLocalizacao(context),
+              icon: const Icon(Icons.edit_outlined, size: 17),
+              label: Text(maquina.emQuarentena ? 'Cadastrar' : 'Alterar'),
+              style: TextButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                  padding: const EdgeInsets.symmetric(horizontal: 10)),
+            ),
+        ]),
+        const SizedBox(height: 8),
+        Card(
+          margin: const EdgeInsets.only(bottom: 20),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+            child: Column(children: [
+              _Linha(rotulo: 'Escola', valor: maquina.escolaTexto),
+              _Linha(rotulo: 'Sala', valor: maquina.salaTexto),
+              _Linha(rotulo: 'Status', valor: maquina.statusTexto),
+              _Linha(
+                rotulo: 'Ultima leitura',
+                valor: '${formatarData(maquina.atualizadoEm)}  '
+                    '(${formatarRelativo(maquina.atualizadoEm)})',
+              ),
+            ]),
+          ),
+        ),
+
         _Secao(titulo: 'Hardware', linhas: {
           'Fabricante': maquina.fabricante,
           'Modelo': maquina.modeloPc,
@@ -110,23 +304,20 @@ class FichaScreen extends StatelessWidget {
 
               if (pontos.length < 2) {
                 return Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.timeline_outlined,
-                          size: 34, color: Color(0xFF8A8F98)),
-                      const SizedBox(height: 10),
-                      Text(
-                        pontos.length == 1
-                            ? 'Apenas uma leitura registrada.\n'
-                                'O grafico aparece a partir da segunda passagem.'
-                            : 'Sem historico registrado ainda.',
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                            fontSize: 12.5, color: Color(0xFF8A8F98)),
-                      ),
-                    ],
-                  ),
+                  child: Column(mainAxisSize: MainAxisSize.min, children: [
+                    const Icon(Icons.timeline_outlined,
+                        size: 34, color: Color(0xFF8A8F98)),
+                    const SizedBox(height: 10),
+                    Text(
+                      pontos.length == 1
+                          ? 'Apenas uma leitura registrada.\n'
+                              'O grafico aparece a partir da segunda passagem.'
+                          : 'Sem historico registrado ainda.',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                          fontSize: 12.5, color: Color(0xFF8A8F98)),
+                    ),
+                  ]),
                 );
               }
 
@@ -139,12 +330,43 @@ class FichaScreen extends StatelessWidget {
   }
 }
 
-/// Grafico de evolucao do risco.
-///
-/// A versao anterior deixava o fl_chart decidir os rotulos do eixo X, que
-/// entao desenhava um rotulo por unidade decimal - centenas de numeros
-/// ilegiveis embaixo da linha. Aqui o eixo X e escondido (a ordem das
-/// leituras ja e evidente pela linha) e o eixo Y mostra porcentagem.
+class _FaixaBaixa extends StatelessWidget {
+  final Maquina maquina;
+  const _FaixaBaixa({required this.maquina});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 18),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF8A8F98).withValues(alpha: 0.13),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+            color: const Color(0xFF8A8F98).withValues(alpha: 0.35)),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const Row(children: [
+          Icon(Icons.archive_outlined, size: 19, color: Color(0xFF8A8F98)),
+          SizedBox(width: 9),
+          Text('Patrimonio baixado',
+              style: TextStyle(
+                  fontWeight: FontWeight.w700, color: Color(0xFF8A8F98))),
+        ]),
+        const SizedBox(height: 8),
+        if (maquina.motivoBaixa.isNotEmpty)
+          Text(maquina.motivoBaixa, style: const TextStyle(fontSize: 13)),
+        const SizedBox(height: 4),
+        Text(
+          '${formatarData(maquina.dataBaixa)}'
+          '${maquina.usuarioBaixa.isEmpty ? "" : "  por ${maquina.usuarioBaixa}"}',
+          style: const TextStyle(fontSize: 11.5, color: Color(0xFF8A8F98)),
+        ),
+      ]),
+    );
+  }
+}
+
 class _GraficoEvolucao extends StatelessWidget {
   final List<Map<String, dynamic>> pontos;
   final Color cor;
@@ -153,10 +375,8 @@ class _GraficoEvolucao extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Mostra no maximo as 30 leituras mais recentes.
-    final dados = pontos.length > 30
-        ? pontos.sublist(pontos.length - 30)
-        : pontos;
+    final dados =
+        pontos.length > 30 ? pontos.sublist(pontos.length - 30) : pontos;
 
     return LineChart(
       LineChartData(
@@ -168,8 +388,8 @@ class _GraficoEvolucao extends StatelessWidget {
           LineChartBarData(
             spots: [
               for (var i = 0; i < dados.length; i++)
-                FlSpot(i.toDouble(),
-                    (dados[i]['risco_falha'] as num).toDouble()),
+                FlSpot(
+                    i.toDouble(), (dados[i]['risco_falha'] as num).toDouble()),
             ],
             isCurved: true,
             curveSmoothness: 0.25,
@@ -193,8 +413,6 @@ class _GraficoEvolucao extends StatelessWidget {
               const AxisTitles(sideTitles: SideTitles(showTitles: false)),
           rightTitles:
               const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          // Eixo X escondido: a sequencia das leituras ja e clara pela linha,
-          // e as datas nao cabem na largura disponivel.
           bottomTitles:
               const AxisTitles(sideTitles: SideTitles(showTitles: false)),
           leftTitles: AxisTitles(
@@ -211,11 +429,8 @@ class _GraficoEvolucao extends StatelessWidget {
             ),
           ),
         ),
-        gridData: FlGridData(
-          show: true,
-          drawVerticalLine: false,
-          horizontalInterval: 0.25,
-        ),
+        gridData: const FlGridData(
+            show: true, drawVerticalLine: false, horizontalInterval: 0.25),
         borderData: FlBorderData(show: false),
         lineTouchData: LineTouchData(
           touchTooltipData: LineTouchTooltipData(
@@ -230,7 +445,6 @@ class _GraficoEvolucao extends StatelessWidget {
                 .toList(),
           ),
         ),
-        // Faixas de decisao: 25% atencao, 60% critico
         extraLinesData: ExtraLinesData(horizontalLines: [
           HorizontalLine(
             y: 0.25,
@@ -250,16 +464,14 @@ class _GraficoEvolucao extends StatelessWidget {
   }
 }
 
-/// Atributos SMART, com destaque para os que indicam problema.
 class _SecaoSmart extends StatelessWidget {
   final Map<String, dynamic> smart;
   const _SecaoSmart({required this.smart});
 
   @override
   Widget build(BuildContext context) {
-    final linhas = _rotulosSmart.entries
-        .where((e) => smart.containsKey(e.key))
-        .toList();
+    final linhas =
+        _rotulosSmart.entries.where((e) => smart.containsKey(e.key)).toList();
     if (linhas.isEmpty) return const SizedBox.shrink();
 
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -306,6 +518,29 @@ class _SecaoSmart extends StatelessWidget {
   }
 }
 
+class _Linha extends StatelessWidget {
+  final String rotulo;
+  final String valor;
+  const _Linha({required this.rotulo, required this.valor});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 7),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        SizedBox(
+          width: 165,
+          child: Text(rotulo,
+              style: const TextStyle(fontSize: 13, color: Color(0xFF8A8F98))),
+        ),
+        Expanded(
+            child: Text(valor.isEmpty ? '--' : valor,
+                style: const TextStyle(fontSize: 13.5))),
+      ]),
+    );
+  }
+}
+
 class _Secao extends StatelessWidget {
   final String titulo;
   final Map<String, String> linhas;
@@ -324,23 +559,7 @@ class _Secao extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
           child: Column(
             children: linhas.entries
-                .map((e) => Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 7),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          SizedBox(
-                            width: 165,
-                            child: Text(e.key,
-                                style: const TextStyle(
-                                    fontSize: 13, color: Color(0xFF8A8F98))),
-                          ),
-                          Expanded(
-                              child: Text(e.value.isEmpty ? '--' : e.value,
-                                  style: const TextStyle(fontSize: 13.5))),
-                        ],
-                      ),
-                    ))
+                .map((e) => _Linha(rotulo: e.key, valor: e.value))
                 .toList(),
           ),
         ),

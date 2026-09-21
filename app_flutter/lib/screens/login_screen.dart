@@ -2,11 +2,19 @@ import 'package:flutter/material.dart';
 
 import '../services/auth_service.dart';
 
-/// Tela de entrada. Alterna entre login e criacao de conta no mesmo formulario.
+/// Tela de entrada.
 ///
-/// PRE-REQUISITO NO FIREBASE:
-///   Console > Authentication > Sign-in method > Email/Password > Ativar
-/// Sem isso, qualquer tentativa retorna 'operation-not-allowed'.
+/// NAO HA AUTOCADASTRO. As contas sao criadas pelo administrador no console
+/// do Firebase (Authentication > Usuarios > Adicionar usuario), e a opcao
+/// "Ativar criacao (inscricao)" fica desligada nas configuracoes.
+///
+/// A razao e institucional: este e um painel de patrimonio publico. Acesso
+/// a inventario de uma rede de ensino e concedido, nao solicitado. Com o
+/// painel publicado em endereco publico, um botao de criar conta permitiria
+/// que qualquer pessoa com o link visse todo o parque de equipamentos.
+///
+/// A recuperacao de senha continua disponivel: quem ja tem conta consegue
+/// redefinir sozinho, sem depender do administrador.
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -20,7 +28,6 @@ class _LoginScreenState extends State<LoginScreen> {
   final _senha = TextEditingController();
   final _chaveForm = GlobalKey<FormState>();
 
-  bool _criandoConta = false;
   bool _carregando = false;
   bool _senhaVisivel = false;
   String? _erro;
@@ -33,7 +40,7 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  Future<void> _enviar() async {
+  Future<void> _entrar() async {
     if (!_chaveForm.currentState!.validate()) return;
 
     setState(() {
@@ -43,12 +50,8 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      if (_criandoConta) {
-        await _auth.criarConta(_email.text, _senha.text);
-      } else {
-        await _auth.entrar(_email.text, _senha.text);
-      }
-      // Não é preciso navegar: o AuthGate no main.dart percebe a mudança
+      await _auth.entrar(_email.text, _senha.text);
+      // Nao e preciso navegar: o AuthGate no main.dart percebe a mudanca
       // de estado e troca a tela sozinho.
     } catch (e) {
       if (mounted) setState(() => _erro = AuthService.traduzirErro(e));
@@ -68,7 +71,8 @@ class _LoginScreenState extends State<LoginScreen> {
       if (mounted) {
         setState(() {
           _erro = null;
-          _aviso = 'Link de redefinicao enviado para $email.';
+          _aviso = 'Se houver conta para $email, o link de redefinicao '
+              'foi enviado.';
         });
       }
     } catch (e) {
@@ -129,7 +133,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   TextFormField(
                     controller: _senha,
                     obscureText: !_senhaVisivel,
-                    onFieldSubmitted: (_) => _enviar(),
+                    autofillHints: const [AutofillHints.password],
+                    onFieldSubmitted: (_) => _entrar(),
                     decoration: InputDecoration(
                       labelText: 'Senha',
                       prefixIcon: const Icon(Icons.lock_outline),
@@ -138,15 +143,13 @@ class _LoginScreenState extends State<LoginScreen> {
                         icon: Icon(_senhaVisivel
                             ? Icons.visibility_off_outlined
                             : Icons.visibility_outlined),
+                        tooltip: _senhaVisivel ? 'Ocultar senha' : 'Mostrar senha',
                         onPressed: () =>
                             setState(() => _senhaVisivel = !_senhaVisivel),
                       ),
                     ),
-                    validator: (v) {
-                      if ((v ?? '').isEmpty) return 'Informe a senha';
-                      if (v!.length < 6) return 'Minimo de 6 caracteres';
-                      return null;
-                    },
+                    validator: (v) =>
+                        (v ?? '').isEmpty ? 'Informe a senha' : null,
                   ),
 
                   if (_erro != null) ...[
@@ -195,7 +198,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(height: 22),
 
                   FilledButton(
-                    onPressed: _carregando ? null : _enviar,
+                    onPressed: _carregando ? null : _entrar,
                     style: FilledButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16)),
                     child: _carregando
@@ -203,29 +206,24 @@ class _LoginScreenState extends State<LoginScreen> {
                             height: 20,
                             width: 20,
                             child: CircularProgressIndicator(strokeWidth: 2.2))
-                        : Text(_criandoConta ? 'Criar conta' : 'Entrar'),
+                        : const Text('Entrar'),
                   ),
 
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 8),
 
                   TextButton(
-                    onPressed: _carregando
-                        ? null
-                        : () => setState(() {
-                              _criandoConta = !_criandoConta;
-                              _erro = null;
-                              _aviso = null;
-                            }),
-                    child: Text(_criandoConta
-                        ? 'Ja tenho conta. Entrar'
-                        : 'Primeiro acesso? Criar conta'),
+                    onPressed: _carregando ? null : _recuperarSenha,
+                    child: const Text('Esqueci minha senha'),
                   ),
 
-                  if (!_criandoConta)
-                    TextButton(
-                      onPressed: _carregando ? null : _recuperarSenha,
-                      child: const Text('Esqueci minha senha'),
-                    ),
+                  const SizedBox(height: 20),
+                  Text(
+                    'O acesso e concedido pelo administrador do sistema.\n'
+                    'Solicite seu cadastro a equipe responsavel pela URE.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                        fontSize: 11.5, color: tema.colorScheme.outline),
+                  ),
                 ],
               ),
             ),

@@ -22,6 +22,11 @@ class Maquina {
   final DateTime? atualizadoEm;
   final Map<String, dynamic> smart;
 
+  // ---- dados de baixa de patrimonio ----
+  final String motivoBaixa;
+  final DateTime? dataBaixa;
+  final String usuarioBaixa;
+
   Maquina({
     required this.serialBios,
     this.fabricante = '',
@@ -39,6 +44,9 @@ class Maquina {
     this.status = 'ativo',
     this.atualizadoEm,
     this.smart = const {},
+    this.motivoBaixa = '',
+    this.dataBaixa,
+    this.usuarioBaixa = '',
   });
 
   factory Maquina.fromMap(String id, Map<String, dynamic> m) {
@@ -47,8 +55,8 @@ class Maquina {
       serialBios: id,
       fabricante: (m['fabricante'] ?? '') as String,
       modeloPc: (m['modelo_pc'] ?? '') as String,
-      escola: (m['escola'] ?? 'Nao atribuida') as String,
-      sala: (m['sala'] ?? '-') as String,
+      escola: (m['escola'] ?? '') as String,
+      sala: (m['sala'] ?? '') as String,
       cpu: (m['cpu'] ?? '') as String,
       cpuCores: (m['cpu_cores'] ?? 0) as int,
       ramGb: (m['ram_gb'] ?? 0) as int,
@@ -61,8 +69,12 @@ class Maquina {
       atualizadoEm: DateTime.tryParse((m['atualizado_em'] ?? '') as String),
       smart: {
         for (final e in disco.entries)
-          if (e.key.startsWith('smart_')) e.key: e.value,
+          if (e.key.startsWith('smart_') && e.key != 'smart_ok')
+            e.key: e.value,
       },
+      motivoBaixa: (m['motivo_baixa'] ?? '') as String,
+      dataBaixa: DateTime.tryParse((m['data_baixa'] ?? '') as String),
+      usuarioBaixa: (m['usuario_baixa'] ?? '') as String,
     );
   }
 
@@ -81,4 +93,33 @@ class Maquina {
       : '${(capacidadeBytes / 1e9).toStringAsFixed(0)} GB';
 
   bool get emQuarentena => status == 'quarentena';
+  bool get baixada => status == 'descartado';
+
+  /// Maquina que conta no inventario ativo da rede.
+  bool get ativa => status == 'ativo';
+
+  String get escolaTexto => escola.isEmpty ? 'Nao atribuida' : escola;
+  String get salaTexto => sala.isEmpty ? '-' : sala;
+
+  String get statusTexto => switch (status) {
+        'ativo' => 'Ativo',
+        'quarentena' => 'Quarentena',
+        'descartado' => 'Baixado',
+        _ => status,
+      };
+}
+
+/// Motivos previstos para baixa de patrimonio.
+/// Lista fechada para que o relatorio consolidado seja agrupavel - texto
+/// livre viraria dezenas de variacoes da mesma coisa.
+class MotivosBaixa {
+  static const lista = [
+    'Defeito irreparavel',
+    'Obsolescencia',
+    'Furto ou extravio',
+    'Transferencia para outra unidade',
+    'Doacao',
+    'Sinistro (incendio, alagamento)',
+    'Outro',
+  ];
 }
