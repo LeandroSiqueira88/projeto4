@@ -47,6 +47,9 @@ class AuthService {
       'invalid-credential' => 'E-mail ou senha incorretos.',
       'email-already-in-use' => 'Ja existe uma conta com esse e-mail.',
       'weak-password' => 'A senha precisa de pelo menos 6 caracteres.',
+            'admin-restricted-operation' =>
+        'O cadastro e feito pelo administrador.\n'
+            'Solicite seu acesso a equipe da URE.',
       'operation-not-allowed' =>
         'Login por e-mail nao esta habilitado no Firebase.\n'
             'Ative em: Authentication > Sign-in method > Email/Password.',

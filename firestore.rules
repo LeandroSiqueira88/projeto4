@@ -3,9 +3,14 @@ rules_version = '2';
 // Regras do Cloud Firestore.
 // Publique com: firebase deploy --only firestore:rules
 //
-// Modelo: o app Flutter so LE. Quem escreve e o script da bancada, que usa
-// credencial de conta de servico (Admin SDK) e ignora estas regras por design.
-// Isso e proposital: nenhum segredo de escrita vai dentro do app.
+// Modelo de escrita:
+//   - O script da bancada usa credencial de conta de servico (Admin SDK) e
+//     ignora estas regras por design. E ele quem grava telemetria e risco.
+//   - O aplicativo Flutter so pode alterar campos de GESTAO: status,
+//     localizacao e dados de baixa. Telemetria e risco nao podem ser
+//     forjados pelo app.
+//
+// Nenhum segredo de escrita vai dentro do aplicativo.
 
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -14,24 +19,60 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    // Campos que o aplicativo pode alterar.
+    // Qualquer campo fora desta lista so muda pelo script da bancada.
+    function camposDeGestao() {
+      return request.resource.data.diff(resource.data).affectedKeys()
+        .hasOnly([
+          'status',
+          'escola',
+          'sala',
+          'motivo_baixa',
+          'data_baixa',
+          'usuario_baixa'
+        ]);
+    }
+
     match /maquinas/{serial} {
       allow read: if autenticado();
-      // gestor pode reclassificar (tirar de quarentena, descartar),
-      // mas nao pode forjar telemetria nem risco
-      allow update: if autenticado()
-        && request.resource.data.diff(resource.data).affectedKeys()
-             .hasOnly(['status', 'escola', 'sala']);
-      allow create, delete: if false;
+
+      // Reclassificar, remanejar e dar baixa: permitido.
+      // Alterar telemetria ou risco: bloqueado pela funcao acima.
+      allow update: if autenticado() && camposDeGestao();
+
+      // Exclusao definitiva de patrimonio. Permitida a usuario autenticado
+      // porque ha casos legitimos - registro duplicado, maquina cadastrada
+      // por engano, equipamento que nunca existiu no parque.
+      //
+      // A baixa (status = 'descartado') e o caminho recomendado e preserva
+      // o historico. A exclusao apaga tudo e nao tem volta.
+      allow delete: if autenticado();
+
+      // Criacao e exclusiva do script da bancada, que usa Admin SDK.
+      // Isso garante que toda maquina no inventario passou por uma leitura
+      // real de hardware, e nao foi digitada a mao no aplicativo.
+      allow create: if false;
 
       match /leituras/{leitura} {
         allow read: if autenticado();
-        allow write: if false;
+
+        // O aplicativo pode apagar o historico apenas no contexto de
+        // exclusao definitiva da maquina - o Firestore nao remove
+        // subcolecoes automaticamente ao apagar o documento pai.
+        allow delete: if autenticado();
+
+        allow create, update: if false;
       }
     }
 
     match /eventos/{evento} {
       allow read: if autenticado();
-      allow write: if false;
+
+      // O aplicativo registra eventos de gestao (baixa, exclusao) para
+      // manter rastro de quem fez o que. Alterar ou apagar evento ja
+      // gravado nao e permitido - registro de auditoria nao se edita.
+      allow create: if autenticado();
+      allow update, delete: if false;
     }
 
     match /bancadas/{id} {

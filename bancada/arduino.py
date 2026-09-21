@@ -1,7 +1,7 @@
 """
 arduino.py
 ==========
-Comunicacao serial (UART sobre USB) entre o script da bancada e a BlackBoard UNO R3.
+Comunicacao serial (UART sobre USB) entre o script da bancada e a placa.
 
 PROTOCOLO (uma linha JSON por mensagem, terminada em \\n, 9600 baud):
 
@@ -15,11 +15,11 @@ PROTOCOLO (uma linha JSON por mensagem, terminada em \\n, 9600 baud):
     {"ok":true,"led":"vermelho","bancada":"URE-01-B1"}
 
 HONESTIDADE TECNICA (importante para a defesa do PI):
-Isto NAO e seguranca criptografica. O Arduino confirma que existe uma bancada
-fisica autorizada plugada na USB e sinaliza o resultado nos LEDs. Um operador com
-acesso ao codigo consegue simular a resposta. O papel real do Arduino aqui e
-INTERLOCK OPERACIONAL e SINALIZACAO FISICA, nao autenticacao forte.
-Chame assim no relatorio. Se a banca perguntar, essa e a resposta certa.
+Isto NAO e autenticacao criptografica. O Arduino confirma que existe uma
+bancada fisica plugada na USB e sinaliza o resultado nos LEDs. Um operador
+com acesso ao codigo consegue simular a resposta ou ignorar a placa.
+O papel real do Arduino aqui e INTERLOCK OPERACIONAL e SINALIZACAO FISICA,
+nao seguranca. Chame assim no relatorio.
 """
 
 import json
@@ -31,40 +31,101 @@ import serial.tools.list_ports
 BAUD = 9600
 TIMEOUT = 3.0
 
+# Identificacao por VID/PID do conversor USB-serial.
+# Mais confiavel que olhar a descricao da porta, que muda conforme o driver,
+# o idioma do Windows e o fabricante do clone.
+#
+#   0x2341, 0x2A03, 0x2A01 - Arduino oficial (UNO, Mega, Leonardo)
+#   0x1A86                 - WCH CH340 / CH341 (clones chineses)
+#   0x10C4                 - Silicon Labs CP2102 / CP210x
+#   0x0403                 - FTDI FT232
+#   0x067B                 - Prolific PL2303
+VIDS_CONHECIDOS = {
+    0x2341: "Arduino",
+    0x2A03: "Arduino (Genuino)",
+    0x2A01: "Arduino",
+    0x1A86: "CH340/CH341",
+    0x10C4: "CP210x",
+    0x0403: "FTDI",
+    0x067B: "PL2303",
+}
+
+# Fallback por descricao, para placas cujo VID nao esta na lista.
+TERMOS_DESCRICAO = (
+    "arduino", "ch340", "ch341", "cp210", "cp2102", "silicon labs",
+    "usb-serial", "usb serial", "wch", "ftdi", "ft232", "pl2303",
+    "prolific", "usb2.0-serial", "blackboard", "usb-enhanced-serial",
+)
+
 
 class BancadaNaoEncontrada(Exception):
     pass
 
 
 def listar_portas():
-    """Lista as portas seriais visiveis, para debug."""
-    return [(p.device, p.description) for p in serial.tools.list_ports.comports()]
+    """Lista as portas seriais visiveis, com VID/PID, para diagnostico."""
+    saida = []
+    for p in serial.tools.list_ports.comports():
+        vid = f"{p.vid:04X}" if p.vid else "----"
+        pid = f"{p.pid:04X}" if p.pid else "----"
+        chip = VIDS_CONHECIDOS.get(p.vid, "")
+        saida.append((p.device, p.description, f"VID:{vid} PID:{pid}", chip))
+    return saida
 
 
-def detectar_porta():
+def detectar_porta(preferir=None):
     """
-    Procura automaticamente a porta do Arduino.
-    Reconhece os VID/PID mais comuns de UNO e clones (CH340, FTDI).
+    Procura automaticamente a porta da placa.
+
+    preferir: string opcional para desempate quando ha mais de uma placa
+              (ex: "CP210" ou "COM5").
     """
     candidatos = []
+
     for p in serial.tools.list_ports.comports():
-        desc = f"{p.description} {p.manufacturer or ''}".lower()
-        if any(t in desc for t in ("arduino", "ch340", "ch341", "usb-serial",
-                                   "wch", "ftdi", "usb2.0-serial", "blackboard")):
-            candidatos.append(p.device)
+        pontuacao = 0
+
+        # VID conhecido e o sinal mais forte
+        if p.vid in VIDS_CONHECIDOS:
+            pontuacao += 10
+            # Arduino oficial tem prioridade sobre conversor generico
+            if p.vid in (0x2341, 0x2A03, 0x2A01):
+                pontuacao += 5
+
+        texto = f"{p.description} {p.manufacturer or ''} {p.product or ''}".lower()
+        if any(t in texto for t in TERMOS_DESCRICAO):
+            pontuacao += 3
+
+        # Bluetooth virtual aparece como porta serial e nunca e a placa
+        if "bluetooth" in texto:
+            pontuacao = -1
+
+        if preferir and preferir.lower() in f"{p.device} {texto}".lower():
+            pontuacao += 20
+
+        if pontuacao > 0:
+            candidatos.append((pontuacao, p.device, p.description))
+
     if not candidatos:
+        linhas = "\n".join(
+            f"    {dev:8s}  {desc}  [{ids}] {chip}"
+            for dev, desc, ids, chip in listar_portas())
         raise BancadaNaoEncontrada(
-            "Nenhuma porta de Arduino encontrada.\n"
-            "Portas disponiveis: " + str(listar_portas()) + "\n"
-            "Dicas: confira o cabo USB (tem cabo so de carga, sem dados), "
-            "instale o driver CH340 se for clone, e feche o Serial Monitor "
-            "da Arduino IDE - ele trava a porta."
-        )
-    return candidatos[0]
+            "Nenhuma placa encontrada.\n"
+            f"  Portas visiveis:\n{linhas or '    (nenhuma)'}\n"
+            "  Verifique:\n"
+            "    - o cabo USB transmite dados? (existe cabo so de carga)\n"
+            "    - o driver do conversor esta instalado?\n"
+            "        CH340: driver WCH | CP2102: driver Silicon Labs\n"
+            "    - o Serial Monitor da Arduino IDE esta fechado?\n"
+            "      (ele trava a porta e impede outro programa de abrir)")
+
+    candidatos.sort(reverse=True)
+    return candidatos[0][1]
 
 
 class Bancada:
-    """Conexao com o Arduino. Use como context manager."""
+    """Conexao com a placa. Use como context manager."""
 
     def __init__(self, porta=None, baud=BAUD, timeout=TIMEOUT):
         self.porta = porta or detectar_porta()
@@ -83,15 +144,18 @@ class Bancada:
 
     def conectar(self):
         self.ser = serial.Serial(self.porta, self.baud, timeout=self.timeout)
-        # o UNO reinicia quando a porta serial abre; esperar o boot
-        time.sleep(2.2)
+        # A placa reinicia quando a porta serial abre; esperar o boot.
+        # Placas com CP2102 costumam demorar um pouco mais que as com CH340.
+        time.sleep(2.5)
         self.ser.reset_input_buffer()
-        resp = self.enviar({"cmd": "PING"})
+
+        resp = self.enviar({"cmd": "PING"}, tentativas=3)
         if not resp or not resp.get("ok"):
             raise BancadaNaoEncontrada(
-                f"Porta {self.porta} abriu mas nao respondeu ao PING. "
-                "O firmware bancada_token.ino esta gravado no Arduino?"
-            )
+                f"A porta {self.porta} abriu, mas nao houve resposta ao PING.\n"
+                "  O firmware bancada_token.ino esta gravado na placa?\n"
+                "  A velocidade da serial no firmware e 9600?")
+
         self.id_bancada = resp.get("bancada")
         self.firmware = resp.get("fw")
         return self
@@ -137,9 +201,11 @@ class Bancada:
 
 
 if __name__ == "__main__":
-    print("Portas seriais visiveis:")
-    for dev, desc in listar_portas():
-        print(f"  {dev}  -  {desc}")
+    print("Portas seriais visiveis:\n")
+    for dev, desc, ids, chip in listar_portas():
+        marca = f"  <- {chip}" if chip else ""
+        print(f"  {dev:8s}  {desc}")
+        print(f"            {ids}{marca}")
     print()
 
     try:
@@ -150,7 +216,8 @@ if __name__ == "__main__":
 
             for estado in ["OK", "ATENCAO", "CRITICO", "QUARENTENA"]:
                 print(f"  testando LED -> {estado}")
-                print("   ", b.sinalizar(estado, risco=0.5, serial_maquina="TESTE01"))
+                print("   ", b.sinalizar(estado, risco=0.5,
+                                         serial_maquina="TESTE01"))
                 time.sleep(1.5)
 
             print("\nTeste concluido.")
