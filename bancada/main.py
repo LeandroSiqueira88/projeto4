@@ -25,6 +25,7 @@ import argparse
 import json
 import os
 import sys
+import uuid
 from datetime import datetime, timezone
 
 import arduino
@@ -69,20 +70,18 @@ def executar_ciclo(cfg, banca, simular=False):
     inv = hw.coletar_tudo()
     disco = inv["disco"]
 
-    # Cadeia de identificacao: BIOS -> placa-mae -> disco.
+    # Cadeia de identificacao: BIOS -> placa-mae -> disco -> UUID fallback.
     # PC montado (sem fabricante OEM) quase sempre cai para placa-mae ou disco.
     serial = inv["serial_bios"]
     origem = inv.get("origem_serial") or ""
     if not serial:
         serial = disco.get("serial_disco") or ""
-        origem = "disco (fallback)"
+        origem = "disco"
 
     if not serial:
-        print(f"{C_VERM}      Nenhum identificador encontrado.{C_OFF}")
-        print("      Rode como administrador/sudo e confira o smartctl.")
-        if banca:
-            banca.sinalizar("QUARENTENA")
-        return None
+        serial = f"UUID-{uuid.uuid4().hex[:12].upper()}"
+        origem = "UUID (fallback)"
+        print(f"{C_AMAR}      [AVISO] Nenhum serial de hardware valido. Gerado fallback: {serial}{C_OFF}")
 
     print(f"      Serial      : {serial}  ({origem})")
     print(f"      Modelo      : {inv['fabricante']} {inv['modelo_pc']}")
@@ -141,18 +140,27 @@ def executar_ciclo(cfg, banca, simular=False):
     print("\n[5/5] Enviando para o Firestore...")
     registro = {
         "serial_bios": serial,
+        "id_dispositivo": serial,
         "origem_serial": origem,
+        "tipo_identificador": origem,
+        "hostname": inv.get("hostname", ""),
         "fabricante": inv["fabricante"],
         "modelo_pc": inv["modelo_pc"],
         "sistema_operacional": inv["sistema_operacional"],
-        "cpu": inv["cpu"], "cpu_cores": inv["cpu_cores"],
-        "cpu_threads": inv["cpu_threads"], "cpu_freq_ghz": inv["cpu_freq_ghz"],
-        "ram_gb": inv["ram_gb"], "ram_pentes": inv["ram_pentes"],
+        "cpu": inv["cpu"],
+        "processador": inv["cpu"],
+        "cpu_cores": inv["cpu_cores"],
+        "cpu_threads": inv["cpu_threads"],
+        "cpu_freq_ghz": inv["cpu_freq_ghz"],
+        "ram_gb": inv["ram_gb"],
+        "memoria_ram_gb": inv["ram_gb"],
+        "ram_pentes": inv["ram_pentes"],
         "pentes": inv["pentes"],
         "disco": disco,
         "risco_falha": risco["risco"] if risco else None,
         "risco_faixa": faixa,
         "status": status_cadastro,
+        "status_validacao": status_cadastro,
         "id_bancada": cfg["id_bancada"],
         "ure": cfg["ure"],
         "operador": cfg["operador"],

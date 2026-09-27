@@ -22,6 +22,7 @@ import json
 import platform
 import re
 import shutil
+import socket
 import subprocess
 
 SISTEMA = platform.system()  # 'Windows', 'Linux', 'Darwin'
@@ -119,6 +120,7 @@ def ler_identidade():
         "origem_serial": origem,
         "fabricante": fabricante.strip(),
         "modelo_pc": modelo.strip(),
+        "hostname": socket.gethostname(),
     }
 
 

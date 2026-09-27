@@ -17,6 +17,13 @@ class _ListaScreenState extends State<ListaScreen> {
   final _servico = FirestoreService();
   final _busca = TextEditingController();
   String _filtro = 'todas';
+  late final Stream<List<Maquina>> _maquinasStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _maquinasStream = _servico.maquinas();
+  }
 
   @override
   void dispose() {
@@ -28,7 +35,7 @@ class _ListaScreenState extends State<ListaScreen> {
     final termo = _busca.text.trim().toLowerCase();
     if (termo.isNotEmpty) {
       final alvo = '${m.serialBios} ${m.escola} ${m.sala} ${m.modeloPc} '
-              '${m.modeloDisco} ${m.cpu}'
+              '${m.modeloDisco} ${m.cpu} ${m.hostname}'
           .toLowerCase();
       if (!alvo.contains(termo)) return false;
     }
@@ -95,7 +102,7 @@ class _ListaScreenState extends State<ListaScreen> {
       const SizedBox(height: 8),
       Expanded(
         child: StreamBuilder<List<Maquina>>(
-          stream: _servico.maquinas(),
+          stream: _maquinasStream,
           builder: (context, snap) {
             if (snap.hasError) {
               return Center(
