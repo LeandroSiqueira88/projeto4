@@ -41,7 +41,7 @@ _ultimo_erro = ""
 
 
 def _agora():
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now().astimezone().isoformat()
 
 
 def motivo_desconexao():

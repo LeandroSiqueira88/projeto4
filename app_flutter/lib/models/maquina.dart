@@ -1,25 +1,28 @@
 /// Modelo de dados de uma maquina do inventario.
 /// Espelha o documento gravado em `maquinas/{serial_bios}` no Firestore
 /// pelo script bancada/main.py.
+library;
 
 enum FaixaRisco { ok, atencao, critico, semDados }
 
 class Maquina {
-  final String serialBios;
+  final String serialBios;       // id_dispositivo
+  final String tipoIdentificador;// tipo_identificador (BIOS, placa-mae, disco, UUID)
+  final String hostname;         // hostname
   final String fabricante;
   final String modeloPc;
   final String escola;
   final String sala;
-  final String cpu;
+  final String cpu;              // processador
   final int cpuCores;
-  final int ramGb;
+  final int ramGb;               // memoria_ram_gb
   final int ramPentes;
   final String modeloDisco;
   final String tipoDisco;
   final int capacidadeBytes;
   final double? riscoFalha;
-  final String status; // ativo | quarentena | descartado
-  final DateTime? atualizadoEm;
+  final String status;           // status_validacao (ativo | quarentena | descartado)
+  final DateTime? atualizadoEm;   // data_registro
   final Map<String, dynamic> smart;
 
   // ---- dados de baixa de patrimonio ----
@@ -29,6 +32,8 @@ class Maquina {
 
   Maquina({
     required this.serialBios,
+    this.tipoIdentificador = 'BIOS',
+    this.hostname = '',
     this.fabricante = '',
     this.modeloPc = '',
     this.escola = '',
@@ -49,32 +54,72 @@ class Maquina {
     this.usuarioBaixa = '',
   });
 
+  // Parsers robustos para prevenção de TypeError
+  static int _toInt(dynamic val, [int padrao = 0]) {
+    if (val == null) return padrao;
+    if (val is int) return val;
+    if (val is double) return val.toInt();
+    if (val is String) return int.tryParse(val) ?? padrao;
+    return padrao;
+  }
+
+  static double? _toDouble(dynamic val) {
+    if (val == null) return null;
+    if (val is double) return val;
+    if (val is int) return val.toDouble();
+    if (val is String) return double.tryParse(val);
+    return null;
+  }
+
+  static DateTime? _toDateTime(dynamic val) {
+    if (val == null) return null;
+    if (val is DateTime) return val;
+    if (val is String) return DateTime.tryParse(val);
+    try {
+      return (val as dynamic).toDate() as DateTime?;
+    } catch (_) {
+      return null;
+    }
+  }
+
   factory Maquina.fromMap(String id, Map<String, dynamic> m) {
     final disco = (m['disco'] as Map<String, dynamic>?) ?? const {};
+
+    // Mapeamento tolerante que aceita nomes do relatório e do código Python
+    final idDispositivo = m['id_dispositivo'] ?? m['serial_bios'] ?? id;
+    final tipoIdent = m['tipo_identificador'] ?? m['origem_serial'] ?? 'BIOS';
+    final host = m['hostname'] ?? m['nome_host'] ?? '';
+    final proc = m['processador'] ?? m['cpu'] ?? '';
+    final ram = m['memoria_ram_gb'] ?? m['ram_gb'] ?? 0;
+    final statusVal = m['status_validacao'] ?? m['status'] ?? 'ativo';
+    final dataReg = m['data_registro'] ?? m['atualizado_em'];
+
     return Maquina(
-      serialBios: id,
-      fabricante: (m['fabricante'] ?? '') as String,
-      modeloPc: (m['modelo_pc'] ?? '') as String,
-      escola: (m['escola'] ?? '') as String,
-      sala: (m['sala'] ?? '') as String,
-      cpu: (m['cpu'] ?? '') as String,
-      cpuCores: (m['cpu_cores'] ?? 0) as int,
-      ramGb: (m['ram_gb'] ?? 0) as int,
-      ramPentes: (m['ram_pentes'] ?? 0) as int,
-      modeloDisco: (disco['model'] ?? '') as String,
-      tipoDisco: (disco['tipo_disco'] ?? '') as String,
-      capacidadeBytes: (disco['capacity_bytes'] ?? 0) as int,
-      riscoFalha: (m['risco_falha'] as num?)?.toDouble(),
-      status: (m['status'] ?? 'ativo') as String,
-      atualizadoEm: DateTime.tryParse((m['atualizado_em'] ?? '') as String),
+      serialBios: '$idDispositivo',
+      tipoIdentificador: '$tipoIdent',
+      hostname: '$host',
+      fabricante: (m['fabricante'] ?? '').toString(),
+      modeloPc: (m['modelo_pc'] ?? '').toString(),
+      escola: (m['escola'] ?? '').toString(),
+      sala: (m['sala'] ?? '').toString(),
+      cpu: '$proc',
+      cpuCores: _toInt(m['cpu_cores']),
+      ramGb: _toInt(ram),
+      ramPentes: _toInt(m['ram_pentes']),
+      modeloDisco: (disco['model'] ?? '').toString(),
+      tipoDisco: (disco['tipo_disco'] ?? '').toString(),
+      capacidadeBytes: _toInt(disco['capacity_bytes']),
+      riscoFalha: _toDouble(m['risco_falha']),
+      status: '$statusVal',
+      atualizadoEm: _toDateTime(dataReg),
       smart: {
         for (final e in disco.entries)
           if (e.key.startsWith('smart_') && e.key != 'smart_ok')
             e.key: e.value,
       },
-      motivoBaixa: (m['motivo_baixa'] ?? '') as String,
-      dataBaixa: DateTime.tryParse((m['data_baixa'] ?? '') as String),
-      usuarioBaixa: (m['usuario_baixa'] ?? '') as String,
+      motivoBaixa: (m['motivo_baixa'] ?? '').toString(),
+      dataBaixa: _toDateTime(m['data_baixa']),
+      usuarioBaixa: (m['usuario_baixa'] ?? '').toString(),
     );
   }
 
