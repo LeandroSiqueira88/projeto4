@@ -17,12 +17,18 @@ class _ListaScreenState extends State<ListaScreen> {
   final _servico = FirestoreService();
   final _busca = TextEditingController();
   String _filtro = 'todas';
-  late final Stream<List<Maquina>> _maquinasStream;
+  late Stream<List<Maquina>> _maquinasStream;
 
   @override
   void initState() {
     super.initState();
-    _maquinasStream = _servico.maquinas();
+    _recarregar();
+  }
+
+  void _recarregar() {
+    setState(() {
+      _maquinasStream = _servico.maquinas();
+    });
   }
 
   @override
@@ -35,7 +41,7 @@ class _ListaScreenState extends State<ListaScreen> {
     final termo = _busca.text.trim().toLowerCase();
     if (termo.isNotEmpty) {
       final alvo = '${m.serialBios} ${m.escola} ${m.sala} ${m.modeloPc} '
-              '${m.modeloDisco} ${m.cpu} ${m.hostname}'
+          '${m.modeloDisco} ${m.cpu} ${m.hostname}'
           .toLowerCase();
       if (!alvo.contains(termo)) return false;
     }
@@ -45,9 +51,6 @@ class _ListaScreenState extends State<ListaScreen> {
       'quarentena' => m.emQuarentena,
       'antigas' => !m.baixada && leituraAntiga(m.atualizadoEm),
       'baixadas' => m.baixada,
-      // "Todas" mostra o inventario vigente: maquinas baixadas ficam fora,
-      // acessiveis pelo filtro proprio. Inventario ativo nao deve contar
-      // equipamento que ja saiu do patrimonio.
       _ => !m.baixada,
     };
   }
@@ -68,12 +71,12 @@ class _ListaScreenState extends State<ListaScreen> {
             suffixIcon: _busca.text.isEmpty
                 ? null
                 : IconButton(
-                    icon: const Icon(Icons.close, size: 19),
-                    onPressed: () {
-                      _busca.clear();
-                      setState(() {});
-                    },
-                  ),
+              icon: const Icon(Icons.close, size: 19),
+              onPressed: () {
+                _busca.clear();
+                setState(() {});
+              },
+            ),
           ),
         ),
       ),
@@ -108,10 +111,23 @@ class _ListaScreenState extends State<ListaScreen> {
               return Center(
                 child: Padding(
                   padding: const EdgeInsets.all(24),
-                  child: Text('Erro ao carregar: ${snap.error}',
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                          fontSize: 12.5, color: Color(0xFF8A8F98))),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.error_outline, size: 42, color: CoresRisco.critico),
+                      const SizedBox(height: 12),
+                      Text('Erro ao carregar: ${snap.error}',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                              fontSize: 12.5, color: Color(0xFF8A8F98))),
+                      const SizedBox(height: 16),
+                      ElevatedButton.icon(
+                        onPressed: _recarregar,
+                        icon: const Icon(Icons.refresh, size: 18),
+                        label: const Text('Tentar Novamente'),
+                      ),
+                    ],
+                  ),
                 ),
               );
             }
@@ -119,9 +135,42 @@ class _ListaScreenState extends State<ListaScreen> {
               return const Center(child: CircularProgressIndicator());
             }
 
+            final totalGeral = snap.data!.length;
             final itens = snap.data!.where(_passa).toList();
+
             if (itens.isEmpty) {
-              return const Center(child: Text('Nenhum resultado.'));
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.search_off, size: 48, color: Color(0xFF8A8F98)),
+                      const SizedBox(height: 12),
+                      Text(
+                        totalGeral == 0
+                            ? 'Nenhuma maquina cadastrada no inventario.'
+                            : 'Nenhum resultado para os filtros/busca aplicados.',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontSize: 15),
+                      ),
+                      if (totalGeral > 0) ...[
+                        const SizedBox(height: 12),
+                        TextButton.icon(
+                          onPressed: () {
+                            setState(() {
+                              _busca.clear();
+                              _filtro = 'todas';
+                            });
+                          },
+                          icon: const Icon(Icons.clear_all),
+                          label: const Text('Limpar busca e filtros'),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              );
             }
 
             return Column(children: [
@@ -131,7 +180,7 @@ class _ListaScreenState extends State<ListaScreen> {
                   alignment: Alignment.centerLeft,
                   child: Text(
                       '${itens.length} '
-                      '${itens.length == 1 ? "maquina" : "maquinas"}',
+                          '${itens.length == 1 ? "maquina" : "maquinas"}',
                       style: const TextStyle(
                           fontSize: 12, color: Color(0xFF8A8F98))),
                 ),
@@ -139,7 +188,7 @@ class _ListaScreenState extends State<ListaScreen> {
               Expanded(
                 child: ListView.separated(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                   itemCount: itens.length,
                   separatorBuilder: (_, __) => const SizedBox(height: 8),
                   itemBuilder: (context, i) => _ItemMaquina(maquina: itens[i]),
@@ -167,8 +216,8 @@ class _ItemMaquina extends StatelessWidget {
           maquina.baixada
               ? Icons.archive_outlined
               : maquina.emQuarentena
-                  ? Icons.help_outline
-                  : Icons.desktop_windows_outlined,
+              ? Icons.help_outline
+              : Icons.desktop_windows_outlined,
           color: maquina.baixada ? const Color(0xFF8A8F98) : null,
         ),
         title: Row(children: [
@@ -186,7 +235,7 @@ class _ItemMaquina extends StatelessWidget {
             const SizedBox(width: 8),
             Container(
               padding:
-                  const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+              const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
               decoration: BoxDecoration(
                 color: const Color(0xFF8A8F98).withValues(alpha: 0.18),
                 borderRadius: BorderRadius.circular(5),
@@ -203,21 +252,23 @@ class _ItemMaquina extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 2),
-            Text('${maquina.escolaTexto} - ${maquina.salaTexto}'),
+            Text(
+              '${maquina.escolaTexto} - ${maquina.salaTexto}',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
             Text(
                 '${maquina.cpu} | ${maquina.ramGb} GB RAM | '
-                '${maquina.tipoDisco} ${maquina.capacidadeTexto}',
+                    '${maquina.tipoDisco} ${maquina.capacidadeTexto}',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(fontSize: 12)),
             const SizedBox(height: 4),
-            // Data da ultima leitura. Em formato relativo porque o que
-            // importa e se a leitura e recente, nao o timestamp exato.
             Row(children: [
               Icon(Icons.schedule,
                   size: 13,
                   color:
-                      antiga ? CoresRisco.atencao : const Color(0xFF8A8F98)),
+                  antiga ? CoresRisco.atencao : const Color(0xFF8A8F98)),
               const SizedBox(width: 5),
               Text(
                 maquina.baixada

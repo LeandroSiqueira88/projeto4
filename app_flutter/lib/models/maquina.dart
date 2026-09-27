@@ -1,7 +1,7 @@
-
 /// Modelo de dados de uma maquina do inventario.
 /// Espelha o documento gravado em `maquinas/{serial_bios}` no Firestore
 /// pelo script bancada/main.py.
+library;
 
 enum FaixaRisco { ok, atencao, critico, semDados }
 
@@ -98,16 +98,16 @@ class Maquina {
       serialBios: '$idDispositivo',
       tipoIdentificador: '$tipoIdent',
       hostname: '$host',
-      fabricante: (m['fabricante'] ?? '') as String,
-      modeloPc: (m['modelo_pc'] ?? '') as String,
-      escola: (m['escola'] ?? '') as String,
-      sala: (m['sala'] ?? '') as String,
+      fabricante: (m['fabricante'] ?? '').toString(),
+      modeloPc: (m['modelo_pc'] ?? '').toString(),
+      escola: (m['escola'] ?? '').toString(),
+      sala: (m['sala'] ?? '').toString(),
       cpu: '$proc',
       cpuCores: _toInt(m['cpu_cores']),
       ramGb: _toInt(ram),
       ramPentes: _toInt(m['ram_pentes']),
-      modeloDisco: (disco['model'] ?? '') as String,
-      tipoDisco: (disco['tipo_disco'] ?? '') as String,
+      modeloDisco: (disco['model'] ?? '').toString(),
+      tipoDisco: (disco['tipo_disco'] ?? '').toString(),
       capacidadeBytes: _toInt(disco['capacity_bytes']),
       riscoFalha: _toDouble(m['risco_falha']),
       status: '$statusVal',
@@ -117,9 +117,9 @@ class Maquina {
           if (e.key.startsWith('smart_') && e.key != 'smart_ok')
             e.key: e.value,
       },
-      motivoBaixa: (m['motivo_baixa'] ?? '') as String,
+      motivoBaixa: (m['motivo_baixa'] ?? '').toString(),
       dataBaixa: _toDateTime(m['data_baixa']),
-      usuarioBaixa: (m['usuario_baixa'] ?? '') as String,
+      usuarioBaixa: (m['usuario_baixa'] ?? '').toString(),
     );
   }
 

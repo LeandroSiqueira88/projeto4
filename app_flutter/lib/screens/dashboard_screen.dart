@@ -5,34 +5,52 @@ import '../services/firestore_service.dart';
 import '../widgets/risco_badge.dart';
 import 'ficha_screen.dart';
 
-class DashboardScreen extends StatelessWidget {
+class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final servico = FirestoreService();
+  State<DashboardScreen> createState() => _DashboardScreenState();
+}
 
+class _DashboardScreenState extends State<DashboardScreen> {
+  final _servico = FirestoreService();
+  late Stream<List<Maquina>> _maquinasStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _recarregar();
+  }
+
+  void _recarregar() {
+    setState(() {
+      _maquinasStream = _servico.maquinas();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return StreamBuilder<List<Maquina>>(
-      stream: servico.maquinas(),
+      stream: _maquinasStream,
       builder: (context, snap) {
         if (snap.hasError) {
-          return _Erro(mensagem: '${snap.error}');
+          return _Erro(
+            mensagem: '${snap.error}',
+            onTentarNovamente: _recarregar,
+          );
         }
         if (!snap.hasData) {
           return const Center(child: CircularProgressIndicator());
         }
 
-        // Maquinas baixadas ficam fora dos indicadores: o painel mostra o
-        // parque vigente, nao o historico de patrimonio. Elas continuam
-        // acessiveis pelo filtro "Baixadas" no inventario.
         final todas = snap.data!;
         final maquinas = todas.where((m) => !m.baixada).toList();
         final baixadas = todas.length - maquinas.length;
         if (todas.isEmpty) return const _Vazio();
 
         final criticas =
-            maquinas.where((m) => m.faixa == FaixaRisco.critico).toList()
-              ..sort((a, b) => (b.riscoFalha ?? 0).compareTo(a.riscoFalha ?? 0));
+        maquinas.where((m) => m.faixa == FaixaRisco.critico).toList()
+          ..sort((a, b) => (b.riscoFalha ?? 0).compareTo(a.riscoFalha ?? 0));
         final atencao =
             maquinas.where((m) => m.faixa == FaixaRisco.atencao).length;
         final semDados =
@@ -41,14 +59,12 @@ class DashboardScreen extends StatelessWidget {
         final quarentena = maquinas.where((m) => m.emQuarentena).length;
 
         return LayoutBuilder(builder: (context, restricoes) {
-          // Numero de colunas conforme a largura. A altura de cada cartao
-          // e fixa (mainAxisExtent), entao eles nao esticam em tela larga.
           final largura = restricoes.maxWidth;
           final colunas = largura > 1100
               ? 4
               : largura > 760
-                  ? 3
-                  : 2;
+              ? 3
+              : 2;
 
           return ListView(
             padding: const EdgeInsets.all(20),
@@ -70,7 +86,7 @@ class DashboardScreen extends StatelessWidget {
                 itemCount: 4,
                 gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: colunas,
-                  mainAxisExtent: 74, // altura fixa do cartao
+                  mainAxisExtent: 74,
                   mainAxisSpacing: 12,
                   crossAxisSpacing: 12,
                 ),
@@ -129,30 +145,30 @@ class DashboardScreen extends StatelessWidget {
                 )
               else
                 ...criticas.take(8).map((m) => Card(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      child: ListTile(
-                        leading: const Icon(Icons.storage_outlined),
-                        title: Text(m.serialBios,
-                            style:
-                                const TextStyle(fontWeight: FontWeight.w600)),
-                        subtitle: Text('${m.escolaTexto} - ${m.salaTexto}\n'
-                            '${m.modeloDisco} ${m.capacidadeTexto}'),
-                        isThreeLine: true,
-                        trailing: RiscoBadge(maquina: m),
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => FichaScreen(maquina: m)),
-                        ),
-                      ),
-                    )),
+                  margin: const EdgeInsets.only(bottom: 8),
+                  child: ListTile(
+                    leading: const Icon(Icons.storage_outlined),
+                    title: Text(m.serialBios,
+                        style:
+                        const TextStyle(fontWeight: FontWeight.w600)),
+                    subtitle: Text('${m.escolaTexto} - ${m.salaTexto}\n'
+                        '${m.modeloDisco} ${m.capacidadeTexto}'),
+                    isThreeLine: true,
+                    trailing: RiscoBadge(maquina: m),
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => FichaScreen(maquina: m)),
+                    ),
+                  ),
+                )),
 
               if (criticas.length > 8)
                 Padding(
                   padding: const EdgeInsets.only(top: 6),
                   child: Text(
                       'e mais ${criticas.length - 8} em risco critico. '
-                      'Veja a lista completa em Inventario.',
+                          'Veja a lista completa em Inventario.',
                       style: const TextStyle(
                           fontSize: 12.5, color: Color(0xFF8A8F98))),
                 ),
@@ -188,7 +204,8 @@ class _Vazio extends StatelessWidget {
 
 class _Erro extends StatelessWidget {
   final String mensagem;
-  const _Erro({required this.mensagem});
+  final VoidCallback onTentarNovamente;
+  const _Erro({required this.mensagem, required this.onTentarNovamente});
 
   @override
   Widget build(BuildContext context) {
@@ -210,10 +227,16 @@ class _Erro extends StatelessWidget {
           Text(
               semPermissao
                   ? 'As regras do Firestore exigem usuario autenticado.\n'
-                      'Saia e entre novamente.'
+                  'Saia e entre novamente.'
                   : mensagem,
               textAlign: TextAlign.center,
               style: const TextStyle(fontSize: 12.5, color: Color(0xFF8A8F98))),
+          const SizedBox(height: 20),
+          ElevatedButton.icon(
+            onPressed: onTentarNovamente,
+            icon: const Icon(Icons.refresh, size: 18),
+            label: const Text('Tentar Novamente'),
+          ),
         ]),
       ),
     );

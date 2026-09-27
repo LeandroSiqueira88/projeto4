@@ -243,10 +243,10 @@ class _DialogoExclusaoState extends State<DialogoExclusao> {
           ),
           const SizedBox(height: 14),
 
-          Align(
+          const Align(
             alignment: Alignment.centerLeft,
             child: Text('Digite o serial para confirmar:',
-                style: const TextStyle(
+                style: TextStyle(
                     fontSize: 12.5, color: Color(0xFF8A8F98))),
           ),
           const SizedBox(height: 4),

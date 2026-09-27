@@ -206,7 +206,7 @@ class _Conteudo extends StatelessWidget {
             ClipRRect(
               borderRadius: BorderRadius.circular(8),
               child: LinearProgressIndicator(
-                value: maquina.riscoFalha ?? 0,
+                value: maquina.riscoFalha != null ? maquina.riscoFalha!.clamp(0.0, 1.0) : 0.0,
                 minHeight: 9,
                 backgroundColor: cor.withValues(alpha: 0.18),
                 valueColor: AlwaysStoppedAnimation(cor),
@@ -485,7 +485,7 @@ class _SecaoSmart extends StatelessWidget {
           child: Column(
             children: linhas.map((e) {
               final valor = smart[e.key];
-              final numero = valor is num ? valor : 0;
+              final numero = valor is num ? valor : (valor != null ? num.tryParse('$valor') ?? 0 : 0);
               final alerta = _sintomas.contains(e.key) && numero > 0;
 
               return Padding(
@@ -497,7 +497,7 @@ class _SecaoSmart extends StatelessWidget {
                         style: const TextStyle(
                             fontSize: 13, color: Color(0xFF8A8F98))),
                   ),
-                  Text('$valor',
+                  Text(valor != null ? '$valor' : '--',
                       style: TextStyle(
                           fontSize: 13.5,
                           fontWeight:
