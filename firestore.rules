@@ -1,17 +1,7 @@
 rules_version = '2';
 
-// Regras do Cloud Firestore.
+// Regras do Cloud Firestore com suporte a multi-tenancy por escola.
 // Publique com: firebase deploy --only firestore:rules
-//
-// Modelo de escrita:
-//   - O script da bancada usa credencial de conta de servico (Admin SDK) e
-//     ignora estas regras por design. E ele quem grava telemetria e risco.
-//   - O aplicativo Flutter so pode alterar campos de GESTAO: status,
-//     localizacao e dados de baixa. Telemetria e risco nao podem ser
-//     forjados pelo app.
-//
-// Nenhum segredo de escrita vai dentro do aplicativo.
-
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -19,8 +9,22 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function isAdmin() {
+      return request.auth != null && request.auth.token.email.matches('.*@ure\\.gov\\.br');
+    }
+
+    function escolaDoUsuario() {
+      let email = request.auth.token.email;
+      return email == 'joao@escola.com' ? 'EE Prof. Joao' :
+             email == 'maria@escola.com' ? 'EE Maria da Silva' :
+             email == 'pedro@escola.com' ? 'EE Dom Pedro II' : '';
+    }
+
+    function podeLerMaquina(resourceData) {
+      return isAdmin() || resourceData.escola == escolaDoUsuario();
+    }
+
     // Campos que o aplicativo pode alterar.
-    // Qualquer campo fora desta lista so muda pelo script da bancada.
     function camposDeGestao() {
       return request.resource.data.diff(resource.data).affectedKeys()
         .hasOnly([
@@ -34,32 +38,22 @@ service cloud.firestore {
     }
 
     match /maquinas/{serial} {
-      allow read: if autenticado();
+      allow read: if autenticado() && podeLerMaquina(resource.data);
 
-      // Reclassificar, remanejar e dar baixa: permitido.
-      // Alterar telemetria ou risco: bloqueado pela funcao acima.
-      allow update: if autenticado() && camposDeGestao();
+      // Reclassificar, remanejar e dar baixa: permitido para admin ou para a propria escola.
+      allow update: if autenticado() && camposDeGestao() && podeLerMaquina(resource.data);
 
-      // Exclusao definitiva de patrimonio. Permitida a usuario autenticado
-      // porque ha casos legitimos - registro duplicado, maquina cadastrada
-      // por engano, equipamento que nunca existiu no parque.
-      //
-      // A baixa (status = 'descartado') e o caminho recomendado e preserva
-      // o historico. A exclusao apaga tudo e nao tem volta.
-      allow delete: if autenticado();
+      // Exclusao definitiva apenas por admin da URE.
+      allow delete: if autenticado() && isAdmin();
 
-      // Criacao e exclusiva do script da bancada, que usa Admin SDK.
-      // Isso garante que toda maquina no inventario passou por uma leitura
-      // real de hardware, e nao foi digitada a mao no aplicativo.
+      // Criacao exclusiva do script da bancada (Admin SDK).
       allow create: if false;
 
       match /leituras/{leitura} {
-        allow read: if autenticado();
+        allow read: if autenticado() && podeLerMaquina(get(/databases/$(database)/documents/maquinas/$(serial)).data);
 
-        // O aplicativo pode apagar o historico apenas no contexto de
-        // exclusao definitiva da maquina - o Firestore nao remove
-        // subcolecoes automaticamente ao apagar o documento pai.
-        allow delete: if autenticado();
+        // Exclusao de leituras apenas por admin.
+        allow delete: if autenticado() && isAdmin();
 
         allow create, update: if false;
       }
@@ -67,10 +61,6 @@ service cloud.firestore {
 
     match /eventos/{evento} {
       allow read: if autenticado();
-
-      // O aplicativo registra eventos de gestao (baixa, exclusao) para
-      // manter rastro de quem fez o que. Alterar ou apagar evento ja
-      // gravado nao e permitido - registro de auditoria nao se edita.
       allow create: if autenticado();
       allow update, delete: if false;
     }

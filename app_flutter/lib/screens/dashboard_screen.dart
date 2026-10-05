@@ -6,7 +6,8 @@ import '../widgets/risco_badge.dart';
 import 'ficha_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
-  const DashboardScreen({super.key});
+  final void Function(int aba, {String? filtro})? onNavegar;
+  const DashboardScreen({super.key, this.onNavegar});
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
@@ -91,22 +92,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       titulo: 'Máquinas',
                       valor: '${maquinas.length}',
                       icone: Icons.desktop_windows_outlined,
-                      cor: const Color(0xFF4A7DD6)),
+                      cor: const Color(0xFF4A7DD6),
+                      onTap: () => widget.onNavegar?.call(1, filtro: 'todas')),
                   CartaoMetrica(
                       titulo: 'Risco crítico',
                       valor: '${criticas.length}',
                       icone: Icons.error_outline,
-                      cor: CoresRisco.critico),
+                      cor: CoresRisco.critico,
+                      onTap: () => widget.onNavegar?.call(1, filtro: 'critico')),
                   CartaoMetrica(
                       titulo: 'Em atenção',
                       valor: '$atencao',
                       icone: Icons.warning_amber_outlined,
-                      cor: CoresRisco.atencao),
+                      cor: CoresRisco.atencao,
+                      onTap: () => widget.onNavegar?.call(1, filtro: 'atencao')),
                   CartaoMetrica(
                       titulo: 'Quarentena',
                       valor: '$quarentena',
                       icone: Icons.help_outline,
-                      cor: const Color(0xFF9B59B6)),
+                      cor: const Color(0xFF9B59B6),
+                      onTap: () => widget.onNavegar?.call(2)),
                 ][i],
               ),
 
@@ -181,6 +186,7 @@ class CartaoMetrica extends StatelessWidget {
   final String valor;
   final IconData icone;
   final Color cor;
+  final VoidCallback? onTap;
 
   const CartaoMetrica({
     super.key,
@@ -188,6 +194,7 @@ class CartaoMetrica extends StatelessWidget {
     required this.valor,
     required this.icone,
     required this.cor,
+    this.onTap,
   });
 
   @override
@@ -200,45 +207,49 @@ class CartaoMetrica extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(color: cor.withValues(alpha: 0.2)),
       ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        child: Row(
-          children: [
-            Icon(icone, color: cor, size: 28),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(
-                      valor,
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800,
-                        color: cor,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          child: Row(
+            children: [
+              Icon(icone, color: cor, size: 28),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        valor,
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800,
+                          color: cor,
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 2),
-                  FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(
-                      titulo,
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w500,
-                        color: cor.withValues(alpha: 0.8),
+                    const SizedBox(height: 2),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        titulo,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                          color: cor.withValues(alpha: 0.8),
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../models/maquina.dart';
+import 'auth_service.dart';
 
 /// Camada unica de acesso ao Firestore com tratamento de erros,
 /// resiliencia e suporte a operacoes offline.
@@ -10,6 +11,7 @@ class FirestoreService {
 
   String get _usuario => FirebaseAuth.instance.currentUser?.email ?? 'desconhecido';
   String get _agora => DateTime.now().toUtc().toIso8601String();
+  String? get _escolaPermitida => AuthService().escolaPermitida;
 
   // -------------------------------------------------------------------------
   // Leitura com tratamento de erros e resiliencia de Stream
@@ -17,11 +19,20 @@ class FirestoreService {
 
   /// Todas as maquinas, em tempo real - inclusive as baixadas.
   Stream<List<Maquina>> maquinas() {
-    return _db
-        .collection('maquinas')
-        .orderBy('atualizado_em', descending: true)
+    Query<Map<String, dynamic>> ref = _db.collection('maquinas');
+    
+    final escola = _escolaPermitida;
+    if (escola != null) {
+      ref = ref.where('escola', isEqualTo: escola);
+    }
+
+    return ref
         .snapshots()
-        .map((s) => s.docs.map((d) => Maquina.fromMap(d.id, d.data())).toList())
+        .map((s) {
+          final lista = s.docs.map((d) => Maquina.fromMap(d.id, d.data())).toList();
+          lista.sort((a, b) => (b.dataVisita ?? DateTime(1970)).compareTo(a.dataVisita ?? DateTime(1970)));
+          return lista;
+        })
         .handleError((error) {
       print('Erro ao carregar stream de maquinas: $error');
       throw _tratarErroFirestore(error);
@@ -42,11 +53,18 @@ class FirestoreService {
   }
 
   Stream<List<Maquina>> quarentena() {
+    if (_escolaPermitida != null) {
+      return Stream.value([]);
+    }
     return _db
         .collection('maquinas')
         .where('status', isEqualTo: 'quarentena')
         .snapshots()
-        .map((s) => s.docs.map((d) => Maquina.fromMap(d.id, d.data())).toList())
+        .map((s) {
+          final lista = s.docs.map((d) => Maquina.fromMap(d.id, d.data())).toList();
+          lista.sort((a, b) => (b.dataVisita ?? DateTime(1970)).compareTo(a.dataVisita ?? DateTime(1970)));
+          return lista;
+        })
         .handleError((error) {
       print('Erro ao carregar quarentena: $error');
       throw _tratarErroFirestore(error);

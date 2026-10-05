@@ -7,7 +7,8 @@ import '../widgets/risco_badge.dart';
 import 'ficha_screen.dart';
 
 class ListaScreen extends StatefulWidget {
-  const ListaScreen({super.key});
+  final String filtroInicial;
+  const ListaScreen({super.key, this.filtroInicial = 'todas'});
 
   @override
   State<ListaScreen> createState() => _ListaScreenState();
@@ -16,13 +17,24 @@ class ListaScreen extends StatefulWidget {
 class _ListaScreenState extends State<ListaScreen> {
   final _servico = FirestoreService();
   final _busca = TextEditingController();
-  String _filtro = 'todas';
+  late String _filtro;
   late Stream<List<Maquina>> _maquinasStream;
 
   @override
   void initState() {
     super.initState();
+    _filtro = widget.filtroInicial;
     _recarregar();
+  }
+
+  @override
+  void didUpdateWidget(covariant ListaScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.filtroInicial != widget.filtroInicial) {
+      setState(() {
+        _filtro = widget.filtroInicial;
+      });
+    }
   }
 
   void _recarregar() {

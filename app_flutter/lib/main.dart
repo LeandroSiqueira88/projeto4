@@ -79,13 +79,24 @@ class HomeShell extends StatefulWidget {
 class _HomeShellState extends State<HomeShell> {
   final _auth = AuthService();
   int _aba = 0;
+  String _filtroInventario = 'todas';
 
   static const _titulos = ['Painel', 'Inventario', 'Quarentena'];
-  static const _telas = [
-    DashboardScreen(),
-    ListaScreen(),
-    QuarentenaScreen(),
-  ];
+  
+  List<Widget> get _telas => [
+        DashboardScreen(
+          onNavegar: (aba, {filtro}) {
+            setState(() {
+              _aba = aba;
+              if (filtro != null) {
+                _filtroInventario = filtro;
+              }
+            });
+          },
+        ),
+        ListaScreen(filtroInicial: _filtroInventario),
+        const QuarentenaScreen(),
+      ];
 
   Future<void> _confirmarSaida() async {
     final sair = await showDialog<bool>(
@@ -109,6 +120,7 @@ class _HomeShellState extends State<HomeShell> {
   @override
   Widget build(BuildContext context) {
     final largo = MediaQuery.of(context).size.width > 800;
+    if (_aba >= _telas.length) _aba = 0;
 
     return Scaffold(
       appBar: AppBar(

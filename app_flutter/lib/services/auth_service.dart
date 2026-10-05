@@ -13,6 +13,18 @@ class AuthService {
 
   String get emailAtual => _auth.currentUser?.email ?? '';
 
+  bool get ehAdmin => emailAtual.endsWith('@ure.gov.br');
+
+  String? get escolaPermitida {
+    if (ehAdmin) return null;
+    return switch (emailAtual) {
+      'joao@escola.com' => 'EE Prof. Joao',
+      'maria@escola.com' => 'EE Maria da Silva',
+      'pedro@escola.com' => 'EE Dom Pedro II',
+      _ => null,
+    };
+  }
+
   Future<UserCredential> entrar(String email, String senha) {
     return _auth.signInWithEmailAndPassword(
       email: email.trim(),
