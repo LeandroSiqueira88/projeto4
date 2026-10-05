@@ -40,8 +40,8 @@ class _ListaScreenState extends State<ListaScreen> {
   bool _passa(Maquina m) {
     final termo = _busca.text.trim().toLowerCase();
     if (termo.isNotEmpty) {
-      final alvo = '${m.serialBios} ${m.escola} ${m.sala} ${m.modeloPc} '
-          '${m.modeloDisco} ${m.cpu} ${m.hostname}'
+      final alvo = '${m.numeroSerie} ${m.escolaNome} ${m.ambiente} ${m.modelo} '
+          '${m.processador} ${m.hostname}'
           .toLowerCase();
       if (!alvo.contains(termo)) return false;
     }
@@ -49,7 +49,7 @@ class _ListaScreenState extends State<ListaScreen> {
       'critico' => m.ativa && m.faixa == FaixaRisco.critico,
       'atencao' => m.ativa && m.faixa == FaixaRisco.atencao,
       'quarentena' => m.emQuarentena,
-      'antigas' => !m.baixada && leituraAntiga(m.atualizadoEm),
+      'antigas' => !m.baixada && leituraAntiga(m.dataVisita),
       'baixadas' => m.baixada,
       _ => !m.baixada,
     };
@@ -64,7 +64,7 @@ class _ListaScreenState extends State<ListaScreen> {
           controller: _busca,
           onChanged: (_) => setState(() {}),
           decoration: InputDecoration(
-            hintText: 'Buscar por serial, escola, sala ou modelo',
+            hintText: 'Buscar por serial, escola, ambiente ou modelo',
             prefixIcon: const Icon(Icons.search),
             border: const OutlineInputBorder(),
             isDense: true,
@@ -86,8 +86,8 @@ class _ListaScreenState extends State<ListaScreen> {
         child: Row(children: [
           for (final f in const [
             ('todas', 'Todas'),
-            ('critico', 'Critico'),
-            ('atencao', 'Atencao'),
+            ('critico', 'Crítico'),
+            ('atencao', 'Atenção'),
             ('quarentena', 'Quarentena'),
             ('antigas', 'Leitura antiga'),
             ('baixadas', 'Baixadas'),
@@ -149,7 +149,7 @@ class _ListaScreenState extends State<ListaScreen> {
                       const SizedBox(height: 12),
                       Text(
                         totalGeral == 0
-                            ? 'Nenhuma maquina cadastrada no inventario.'
+                            ? 'Nenhuma máquina cadastrada no inventário.'
                             : 'Nenhum resultado para os filtros/busca aplicados.',
                         textAlign: TextAlign.center,
                         style: const TextStyle(fontSize: 15),
@@ -180,7 +180,7 @@ class _ListaScreenState extends State<ListaScreen> {
                   alignment: Alignment.centerLeft,
                   child: Text(
                       '${itens.length} '
-                          '${itens.length == 1 ? "maquina" : "maquinas"}',
+                          '${itens.length == 1 ? "máquina" : "máquinas"}',
                       style: const TextStyle(
                           fontSize: 12, color: Color(0xFF8A8F98))),
                 ),
@@ -208,7 +208,7 @@ class _ItemMaquina extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final antiga = !maquina.baixada && leituraAntiga(maquina.atualizadoEm);
+    final antiga = !maquina.baixada && leituraAntiga(maquina.dataVisita);
 
     return Card(
       child: ListTile(
@@ -222,7 +222,7 @@ class _ItemMaquina extends StatelessWidget {
         ),
         title: Row(children: [
           Flexible(
-            child: Text(maquina.serialBios,
+            child: Text(maquina.numeroSerie,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                     fontWeight: FontWeight.w600,
@@ -253,13 +253,12 @@ class _ItemMaquina extends StatelessWidget {
           children: [
             const SizedBox(height: 2),
             Text(
-              '${maquina.escolaTexto} - ${maquina.salaTexto}',
+              '${maquina.escolaTexto} - ${maquina.ambienteTexto}',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
             Text(
-                '${maquina.cpu} | ${maquina.ramGb} GB RAM | '
-                    '${maquina.tipoDisco} ${maquina.capacidadeTexto}',
+                '${maquina.processador} | ${maquina.memoriaRamGb} GB RAM',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(fontSize: 12)),
@@ -272,8 +271,8 @@ class _ItemMaquina extends StatelessWidget {
               const SizedBox(width: 5),
               Text(
                 maquina.baixada
-                    ? 'Baixada ${formatarRelativo(maquina.dataBaixa)}'
-                    : 'Lida ${formatarRelativo(maquina.atualizadoEm)}',
+                    ? 'Baixada ${formatarRelativo(maquina.dataVisita)}'
+                    : 'Lida ${formatarRelativo(maquina.dataVisita)}',
                 style: TextStyle(
                     fontSize: 11.5,
                     fontWeight: antiga ? FontWeight.w600 : FontWeight.normal,

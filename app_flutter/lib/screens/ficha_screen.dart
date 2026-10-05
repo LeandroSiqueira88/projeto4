@@ -12,11 +12,11 @@ const _rotulosSmart = {
   'smart_5_raw': 'Setores realocados',
   'smart_9_raw': 'Horas ligado',
   'smart_12_raw': 'Ciclos de energia',
-  'smart_187_raw': 'Erros nao corrigiveis',
+  'smart_187_raw': 'Erros não corrigíveis',
   'smart_188_raw': 'Command timeout',
   'smart_194_raw': 'Temperatura (C)',
   'smart_197_raw': 'Setores pendentes',
-  'smart_198_raw': 'Setores incorrigiveis',
+  'smart_198_raw': 'Setores incorrigíveis',
   'smart_199_raw': 'Erros CRC (cabo)',
 };
 
@@ -33,14 +33,14 @@ class FichaScreen extends StatelessWidget {
     final servico = FirestoreService();
 
     return StreamBuilder<Maquina?>(
-      stream: servico.maquina(maquina.serialBios),
+      stream: servico.maquina(maquina.numeroSerie),
       initialData: maquina,
       builder: (context, snap) {
-        // Documento apagado enquanto a tela estava aberta (exclusao
-        // definitiva feita aqui ou por outro usuario).
+        // Documento apagado enquanto a tela estava aberta (exclusão
+        // definitiva feita aqui ou por outro usuário).
         if (snap.hasData && snap.data == null) {
           return Scaffold(
-            appBar: AppBar(title: Text(maquina.serialBios)),
+            appBar: AppBar(title: Text(maquina.numeroSerie)),
             body: const Center(
               child: Padding(
                 padding: EdgeInsets.all(30),
@@ -48,7 +48,7 @@ class FichaScreen extends StatelessWidget {
                   Icon(Icons.delete_outline,
                       size: 48, color: Color(0xFF8A8F98)),
                   SizedBox(height: 14),
-                  Text('Este registro foi excluido.',
+                  Text('Este registro foi excluído.',
                       style: TextStyle(fontSize: 16)),
                 ]),
               ),
@@ -78,7 +78,7 @@ class _Conteudo extends StatelessWidget {
       maquina: maquina,
       cadastrando: maquina.emQuarentena,
     );
-    if (salvou && context.mounted) _aviso(context, 'Localizacao atualizada.');
+    if (salvou && context.mounted) _aviso(context, 'Localização atualizada.');
   }
 
   Future<void> _darBaixa(BuildContext context) async {
@@ -87,14 +87,14 @@ class _Conteudo extends StatelessWidget {
   }
 
   Future<void> _reativar(BuildContext context) async {
-    await servico.reativar(maquina.serialBios);
-    if (context.mounted) _aviso(context, 'Maquina reativada.');
+    await servico.reativar(maquina.numeroSerie);
+    if (context.mounted) _aviso(context, 'Máquina reativada.');
   }
 
   Future<void> _excluir(BuildContext context) async {
     final ok = await abrirDialogoExclusao(context, maquina);
     if (ok && context.mounted) {
-      _aviso(context, 'Registro excluido.');
+      _aviso(context, 'Registro excluído.');
       Navigator.pop(context);
     }
   }
@@ -102,30 +102,34 @@ class _Conteudo extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cor = CoresRisco.de(maquina.faixa);
-    final antiga = leituraAntiga(maquina.atualizadoEm);
+    final antiga = leituraAntiga(maquina.dataVisita);
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(maquina.serialBios),
+        title: Text(maquina.numeroSerie),
         actions: [
           if (!maquina.baixada)
             IconButton(
               icon: const Icon(Icons.edit_location_alt_outlined),
-              tooltip: 'Alterar localizacao',
+              tooltip: 'Alterar localização',
               onPressed: () => _editarLocalizacao(context),
             ),
           PopupMenuButton<String>(
-            tooltip: 'Mais acoes',
+            tooltip: 'Mais ações',
             onSelected: (opcao) {
               switch (opcao) {
                 case 'baixa':
                   _darBaixa(context);
+                  break;
                 case 'reativar':
                   _reativar(context);
+                  break;
                 case 'quarentena':
-                  servico.devolverParaQuarentena(maquina.serialBios);
+                  servico.devolverParaQuarentena(maquina.numeroSerie);
+                  break;
                 case 'excluir':
                   _excluir(context);
+                  break;
               }
             },
             itemBuilder: (_) => [
@@ -135,7 +139,7 @@ class _Conteudo extends StatelessWidget {
                   child: ListTile(
                     leading: Icon(Icons.archive_outlined),
                     title: Text('Dar baixa'),
-                    subtitle: Text('Preserva o historico',
+                    subtitle: Text('Preserva o histórico',
                         style: TextStyle(fontSize: 11)),
                     contentPadding: EdgeInsets.zero,
                     dense: true,
@@ -228,8 +232,8 @@ class _Conteudo extends StatelessWidget {
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  'Ultima leitura ${formatarRelativo(maquina.atualizadoEm)}. '
-                  'A predicao pode estar desatualizada.',
+                  'Última leitura ${formatarRelativo(maquina.dataVisita)}. '
+                  'A predição pode estar desatualizada.',
                   style: const TextStyle(
                       fontSize: 12.5, color: CoresRisco.atencao),
                 ),
@@ -241,7 +245,7 @@ class _Conteudo extends StatelessWidget {
         const SizedBox(height: 24),
 
         Row(children: [
-          const Text('Localizacao',
+          const Text('Localização',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
           const Spacer(),
           if (!maquina.baixada)
@@ -261,40 +265,50 @@ class _Conteudo extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
             child: Column(children: [
               _Linha(rotulo: 'Escola', valor: maquina.escolaTexto),
-              _Linha(rotulo: 'Sala', valor: maquina.salaTexto),
+              _Linha(rotulo: 'Ambiente', valor: maquina.ambienteTexto),
+              _Linha(rotulo: 'CIE', valor: maquina.cie),
+              _Linha(rotulo: 'URE / Diretoria', valor: maquina.ureDiretoria),
               _Linha(rotulo: 'Status', valor: maquina.statusTexto),
               _Linha(
-                rotulo: 'Ultima leitura',
-                valor: '${formatarData(maquina.atualizadoEm)}  '
-                    '(${formatarRelativo(maquina.atualizadoEm)})',
+                rotulo: 'Última leitura',
+                valor: '${formatarData(maquina.dataVisita)}  '
+                    '(${formatarRelativo(maquina.dataVisita)})',
               ),
+              _Linha(rotulo: 'Técnico', valor: maquina.tecnicoResponsavel),
+              _Linha(rotulo: 'Avaliação Técnica', valor: maquina.avaliacaoTecnica),
+              if (maquina.observacoes.isNotEmpty)
+                _Linha(rotulo: 'Observações', valor: maquina.observacoes),
             ]),
           ),
         ),
 
         _Secao(titulo: 'Hardware', linhas: {
           'Fabricante': maquina.fabricante,
-          'Modelo': maquina.modeloPc,
-          'Processador': maquina.cpu,
-          'Nucleos': '${maquina.cpuCores}',
-          'Memoria': '${maquina.ramGb} GB em ${maquina.ramPentes} pente(s)',
+          'Modelo': maquina.modelo,
+          'Hostname': maquina.hostname,
+          'Processador': maquina.processador,
+          'Núcleos': '${maquina.cpuCores}',
+          'Memória': '${maquina.memoriaRamGb.toStringAsFixed(1)} GB em ${maquina.ramPentes} pente(s)',
           'Disco': '${maquina.modeloDisco} ${maquina.capacidadeTexto} '
               '(${maquina.tipoDisco})',
+          'Endereço MAC': maquina.macAddress,
+          'Categoria': maquina.categoriaEquipamento,
+          'Tipo ID': maquina.tipoIdentificador,
         }),
 
         _SecaoSmart(smart: maquina.smart),
 
         const SizedBox(height: 12),
-        const Text('Evolucao do risco',
+        const Text('Evolução do risco',
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
         const SizedBox(height: 4),
-        const Text('Cada ponto e uma passagem pela bancada',
+        const Text('Cada ponto é uma passagem pela bancada',
             style: TextStyle(fontSize: 12.5, color: Color(0xFF8A8F98))),
         const SizedBox(height: 14),
         SizedBox(
           height: 190,
           child: StreamBuilder<List<Map<String, dynamic>>>(
-            stream: servico.historico(maquina.serialBios),
+            stream: servico.historico(maquina.numeroSerie),
             builder: (context, snap) {
               if (!snap.hasData) {
                 return const Center(child: CircularProgressIndicator());
@@ -311,8 +325,8 @@ class _Conteudo extends StatelessWidget {
                     Text(
                       pontos.length == 1
                           ? 'Apenas uma leitura registrada.\n'
-                              'O grafico aparece a partir da segunda passagem.'
-                          : 'Sem historico registrado ainda.',
+                              'O gráfico aparece a partir da segunda passagem.'
+                          : 'Sem histórico registrado ainda.',
                       textAlign: TextAlign.center,
                       style: const TextStyle(
                           fontSize: 12.5, color: Color(0xFF8A8F98)),
@@ -349,7 +363,7 @@ class _FaixaBaixa extends StatelessWidget {
         const Row(children: [
           Icon(Icons.archive_outlined, size: 19, color: Color(0xFF8A8F98)),
           SizedBox(width: 9),
-          Text('Patrimonio baixado',
+          Text('Patrimônio baixado',
               style: TextStyle(
                   fontWeight: FontWeight.w700, color: Color(0xFF8A8F98))),
         ]),

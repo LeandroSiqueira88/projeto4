@@ -3,12 +3,12 @@ import 'package:flutter/material.dart';
 import '../models/maquina.dart';
 import '../services/firestore_service.dart';
 
-/// Dialogo de escola e sala, usado em dois lugares:
+/// Diálogo de escola e sala, usado em dois lugares:
 ///  - ficha da maquina, para corrigir ou remanejar
 ///  - quarentena, para cadastrar uma maquina desconhecida
 ///
-/// Um unico dialogo para os dois casos evita que as telas divirjam com o
-/// tempo (validacao diferente, rotulo diferente, comportamento diferente).
+/// Um único diálogo para os dois casos evita que as telas divirjam com o
+/// tempo (validação diferente, rótulo diferente, comportamento diferente).
 class DialogoLocalizacao extends StatefulWidget {
   final Maquina maquina;
 
@@ -16,7 +16,7 @@ class DialogoLocalizacao extends StatefulWidget {
   /// false = maquina ja ativa sendo remanejada (status nao muda)
   final bool cadastrando;
 
-  /// Escolas ja usadas no parque, oferecidas como sugestao.
+  /// Escolas já usadas no parque, oferecidas como sugestão.
   final List<String> escolasConhecidas;
 
   const DialogoLocalizacao({
@@ -42,15 +42,15 @@ class _DialogoLocalizacaoState extends State<DialogoLocalizacao> {
   @override
   void initState() {
     super.initState();
-    // Ao cadastrar da quarentena os campos comecam vazios.
-    // Ao remanejar, comecam com o valor atual para o usuario so corrigir.
-    final e = widget.maquina.escola;
+    // Ao cadastrar da quarentena os campos começam vazios.
+    // Ao remanejar, começam com o valor atual para o usuário só corrigir.
+    final e = widget.maquina.escolaNome;
     _escola = TextEditingController(
-        text: widget.cadastrando || e == 'Nao atribuida' ? '' : e);
+        text: widget.cadastrando || e == 'Não atribuída' ? '' : e);
     _sala = TextEditingController(
-        text: widget.cadastrando || widget.maquina.sala == '-'
+        text: widget.cadastrando || widget.maquina.ambiente == '-'
             ? ''
-            : widget.maquina.sala);
+            : widget.maquina.ambiente);
   }
 
   @override
@@ -73,10 +73,10 @@ class _DialogoLocalizacaoState extends State<DialogoLocalizacao> {
       final sala = _sala.text.trim();
 
       if (widget.cadastrando) {
-        await _servico.aprovarMaquina(widget.maquina.serialBios, escola, sala);
+        await _servico.aprovarMaquina(widget.maquina.numeroSerie, escola, sala);
       } else {
         await _servico.atualizarLocalizacao(
-            widget.maquina.serialBios, escola, sala);
+            widget.maquina.numeroSerie, escola, sala);
       }
 
       if (mounted) Navigator.pop(context, true);
@@ -85,8 +85,8 @@ class _DialogoLocalizacaoState extends State<DialogoLocalizacao> {
         setState(() {
           _salvando = false;
           _erro = '$e'.contains('permission-denied')
-              ? 'Sem permissao para alterar. Saia e entre novamente.'
-              : 'Nao foi possivel salvar. Verifique sua conexao.';
+              ? 'Sem permissão para alterar. Saia e entre novamente.'
+              : 'Não foi possível salvar. Verifique sua conexão.';
         });
       }
     }
@@ -96,14 +96,14 @@ class _DialogoLocalizacaoState extends State<DialogoLocalizacao> {
   Widget build(BuildContext context) {
     return AlertDialog(
       title: Text(widget.cadastrando
-          ? 'Cadastrar maquina'
-          : 'Alterar localizacao'),
+          ? 'Cadastrar máquina'
+          : 'Alterar localização'),
       content: Form(
         key: _chave,
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           Align(
             alignment: Alignment.centerLeft,
-            child: Text(widget.maquina.serialBios,
+            child: Text(widget.maquina.numeroSerie,
                 style: const TextStyle(
                     fontSize: 12.5,
                     fontFamily: 'monospace',
@@ -151,13 +151,13 @@ class _DialogoLocalizacaoState extends State<DialogoLocalizacao> {
             textCapitalization: TextCapitalization.words,
             onFieldSubmitted: (_) => _salvar(),
             decoration: const InputDecoration(
-              labelText: 'Sala',
-              hintText: 'Laboratorio 1, Secretaria...',
+              labelText: 'Ambiente',
+              hintText: 'Laboratório 1, Secretaria...',
               prefixIcon: Icon(Icons.meeting_room_outlined),
               border: OutlineInputBorder(),
             ),
             validator: (v) =>
-                (v ?? '').trim().isEmpty ? 'Informe a sala' : null,
+                (v ?? '').trim().isEmpty ? 'Informe o ambiente' : null,
           ),
 
           if (_erro != null) ...[
@@ -188,7 +188,7 @@ class _DialogoLocalizacaoState extends State<DialogoLocalizacao> {
   }
 }
 
-/// Abre o dialogo e devolve true se algo foi salvo.
+/// Abre o diálogo e devolve true se algo foi salvo.
 Future<bool> abrirDialogoLocalizacao(
   BuildContext context, {
   required Maquina maquina,
