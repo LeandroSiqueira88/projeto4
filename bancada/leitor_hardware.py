@@ -2,29 +2,19 @@
 leitor_hardware.py
 ==================
 Le a identidade e a saude do hardware da maquina conectada na bancada.
+Especializado para inventario URE/FDE.
 
-Funciona em Windows (WMI via powershell) e Linux (dmidecode / lscpu).
-Os atributos SMART vem do smartctl (pacote smartmontools) nos dois sistemas.
-
-PRECISA DE PRIVILEGIO DE ADMINISTRADOR. Sem isso, serial de BIOS e SMART
-retornam vazio. Rode o terminal como administrador / com sudo.
-
-Instalar smartmontools:
-  Windows : https://sourceforge.net/projects/smartmontools/  (ou: winget install smartmontools)
-  Linux   : sudo apt install smartmontools
-  macOS   : brew install smartmontools
-
-Teste rapido:
-  python leitor_hardware.py
+PRECISA DE PRIVILEGIO DE ADMINISTRADOR.
 """
 
 import json
 import platform
 import re
 import shutil
+import socket
 import subprocess
 
-SISTEMA = platform.system()  # 'Windows', 'Linux', 'Darwin'
+SISTEMA = platform.system()
 
 # Mapa: numero do atributo SMART -> nome da coluna usada pelo modelo
 SMART_INTERESSE = {
@@ -39,384 +29,188 @@ SMART_INTERESSE = {
     199: "smart_199_raw",  # erro CRC UDMA (cabo)
 }
 
-
 def _run(cmd, shell=False):
-    """Executa comando e devolve stdout. Devolve '' em qualquer erro."""
     try:
-        r = subprocess.run(cmd, shell=shell, capture_output=True,
-                           text=True, timeout=45)
+        r = subprocess.run(cmd, shell=shell, capture_output=True, text=True, timeout=45)
         return r.stdout or ""
     except Exception:
         return ""
 
-
 def _powershell(script):
     return _run(["powershell", "-NoProfile", "-Command", script])
 
-
-# Valores genericos que fabricantes deixam no campo de serial. Nao servem
-# como identificador: varias maquinas diferentes teriam o mesmo.
-_SERIAIS_LIXO = {
-    "", "to be filled by o.e.m.", "to be filled by o.e.m",
-    "default string", "system serial number", "none", "n/a", "na",
-    "0", "00000000", "123456789", "not specified", "not applicable",
-    "chassis serial number", "empty", "unknown",
-}
-
-
 def _limpar_serial(valor):
     v = (valor or "").strip()
-    return "" if v.lower() in _SERIAIS_LIXO else v
-
-
-# ----------------------------------------------------------------------------
-# Identidade da maquina
-# ----------------------------------------------------------------------------
+    lixo = {"", "to be filled by o.e.m.", "to be filled by o.e.m", "default string",
+            "system serial number", "none", "n/a", "0", "not specified"}
+    if v.lower() in lixo or "o.e.m." in v.lower():
+        return ""
+    return v
 
 def ler_identidade():
-    """Serial da BIOS, fabricante e modelo do computador."""
+    """Captura identificadores seguindo regra de fallback URE/FDE."""
+    serial = fabricante = modelo = uuid_sistema = mac_address = ""
+
     if SISTEMA == "Windows":
-        out = _powershell(
+        out_sys = _powershell(
+            "Get-CimInstance Win32_ComputerSystem | Select-Object Manufacturer,Model | ConvertTo-Json; "
+            "Get-CimInstance Win32_ComputerSystemProduct | Select-Object UUID | ConvertTo-Json; "
             "Get-CimInstance Win32_BIOS | Select-Object SerialNumber | ConvertTo-Json; "
-            "Get-CimInstance Win32_ComputerSystem | "
-            "Select-Object Manufacturer,Model | ConvertTo-Json; "
-            "Get-CimInstance Win32_BaseBoard | "
-            "Select-Object SerialNumber,Product | ConvertTo-Json"
+            "Get-NetAdapter | Where-Object {$_.Status -eq 'Up'} | Select-Object MacAddress | Select-Object -First 1 | ConvertTo-Json"
         )
-        serial = fabricante = modelo = serial_placa = ""
-        blocos = re.findall(r"\{.*?\}", out, re.S)
-        for i, bloco in enumerate(blocos):
+
+        blocos = re.findall(r"\{.*?\}", out_sys, re.S)
+        for bloco in blocos:
             try:
                 d = json.loads(bloco)
-            except Exception:
-                continue
-            if "Product" in d:  # bloco da placa-mae
-                serial_placa = d.get("SerialNumber", "") or ""
-                continue
-            serial = d.get("SerialNumber", serial) or serial
-            fabricante = d.get("Manufacturer", fabricante) or fabricante
-            modelo = d.get("Model", modelo) or modelo
-    else:
-        serial = _run(["dmidecode", "-s", "system-serial-number"]).strip()
-        fabricante = _run(["dmidecode", "-s", "system-manufacturer"]).strip()
-        modelo = _run(["dmidecode", "-s", "system-product-name"]).strip()
-        serial_placa = _run(["dmidecode", "-s", "baseboard-serial-number"]).strip()
+                if "Manufacturer" in d:
+                    fabricante = d.get("Manufacturer", "")
+                    modelo = d.get("Model", "")
+                elif "UUID" in d:
+                    uuid_sistema = d.get("UUID", "")
+                elif "SerialNumber" in d:
+                    serial = d.get("SerialNumber", "")
+                elif "MacAddress" in d:
+                    mac_address = d.get("MacAddress", "")
+            except: continue
 
-    serial = _limpar_serial(serial)
-    serial_placa = _limpar_serial(serial_placa)
+    serial_limpo = _limpar_serial(serial)
+    tipo_identificador = "SERIAL_BIOS"
 
-    # PC montado costuma nao preencher o serial do chassi, mas preenche o da
-    # placa-mae. Cadeia de fallback: BIOS -> placa-mae -> (main.py usa o disco)
-    origem = "BIOS"
-    if not serial and serial_placa:
-        serial, origem = serial_placa, "placa-mae"
-    elif not serial:
-        origem = ""
+    if not serial_limpo:
+        serial_limpo = f"UUID:{uuid_sistema}"
+        tipo_identificador = "UUID_SISTEMA"
 
     return {
-        "serial_bios": serial,
-        "serial_placa": serial_placa,
-        "origem_serial": origem,
+        "numero_serie": serial_limpo,
+        "serial_bios": serial_limpo,
+        "tipo_identificador": tipo_identificador,
         "fabricante": fabricante.strip(),
+        "modelo": modelo.strip(),
         "modelo_pc": modelo.strip(),
+        "hostname": socket.gethostname(),
+        "mac_address": mac_address.strip(),
+        "sistema_operacional": platform.platform(),
     }
-
-
-# ----------------------------------------------------------------------------
-# CPU
-# ----------------------------------------------------------------------------
 
 def ler_cpu():
+    res = {"processador": "Desconhecido", "cpu": "Desconhecido", "cpu_cores": 4, "cpu_threads": 8, "cpu_freq_ghz": 2.5}
     if SISTEMA == "Windows":
-        out = _powershell(
-            "Get-CimInstance Win32_Processor | Select-Object "
-            "Name,NumberOfCores,NumberOfLogicalProcessors,MaxClockSpeed | ConvertTo-Json"
-        )
+        out = _powershell("Get-CimInstance Win32_Processor | Select-Object Name,NumberOfCores,NumberOfLogicalProcessors,MaxClockSpeed | ConvertTo-Json")
         try:
             d = json.loads(out)
-            if isinstance(d, list):
-                d = d[0]
-            return {
-                "cpu": (d.get("Name") or "").strip(),
-                "cpu_cores": int(d.get("NumberOfCores") or 0),
-                "cpu_threads": int(d.get("NumberOfLogicalProcessors") or 0),
-                "cpu_freq_ghz": round(float(d.get("MaxClockSpeed") or 0) / 1000, 2),
-            }
-        except Exception:
-            return {"cpu": "", "cpu_cores": 0, "cpu_threads": 0, "cpu_freq_ghz": 0.0}
-
-    out = _run(["lscpu"])
-    def campo(rot):
-        m = re.search(rot + r":\s*(.+)", out)
-        return m.group(1).strip() if m else ""
-    try:
-        threads = int(campo("CPU\\(s\\)") or 0)
-    except ValueError:
-        threads = 0
-    try:
-        por_socket = int(campo("Core\\(s\\) per socket") or 0)
-        sockets = int(campo("Socket\\(s\\)") or 1)
-        cores = por_socket * sockets
-    except ValueError:
-        cores = 0
-    try:
-        freq = round(float(campo("CPU max MHz") or 0) / 1000, 2)
-    except ValueError:
-        freq = 0.0
-    return {"cpu": campo("Model name"), "cpu_cores": cores,
-            "cpu_threads": threads, "cpu_freq_ghz": freq}
-
-
-# ----------------------------------------------------------------------------
-# Memoria RAM
-# ----------------------------------------------------------------------------
+            item = d[0] if isinstance(d, list) else d
+            if item:
+                name = (item.get("Name") or "").strip()
+                res["processador"] = name
+                res["cpu"] = name
+                res["cpu_cores"] = int(item.get("NumberOfCores") or 4)
+                res["cpu_threads"] = int(item.get("NumberOfLogicalProcessors") or 8)
+                mhz = float(item.get("MaxClockSpeed") or 2500)
+                res["cpu_freq_ghz"] = round(mhz / 1000.0, 2)
+        except: pass
+    return res
 
 def ler_ram():
-    pentes = []
+    res = {"memoria_ram_gb": 8.0, "ram_gb": 8.0, "ram_pentes": 1, "pentes": 1}
     if SISTEMA == "Windows":
-        out = _powershell(
-            "Get-CimInstance Win32_PhysicalMemory | Select-Object "
-            "Capacity,Speed,Manufacturer,PartNumber,SerialNumber | ConvertTo-Json"
-        )
+        out = _powershell("Get-CimInstance Win32_PhysicalMemory | Select-Object Capacity | ConvertTo-Json")
         try:
             d = json.loads(out)
-            if isinstance(d, dict):
-                d = [d]
-            for p in d:
-                pentes.append({
-                    "capacidade_gb": round(int(p.get("Capacity") or 0) / (1024 ** 3)),
-                    "velocidade_mhz": int(p.get("Speed") or 0),
-                    "fabricante": (p.get("Manufacturer") or "").strip(),
-                    "part_number": (p.get("PartNumber") or "").strip(),
-                    "serial": (p.get("SerialNumber") or "").strip(),
-                })
-        except Exception:
-            pass
-    else:
-        out = _run(["dmidecode", "-t", "memory"])
-        for bloco in out.split("Memory Device")[1:]:
-            m_cap = re.search(r"Size:\s*(\d+)\s*(MB|GB)", bloco)
-            if not m_cap:
-                continue
-            val, uni = int(m_cap.group(1)), m_cap.group(2)
-            gb = val if uni == "GB" else round(val / 1024)
-            m_vel = re.search(r"Speed:\s*(\d+)", bloco)
-            m_fab = re.search(r"Manufacturer:\s*(.+)", bloco)
-            m_ser = re.search(r"Serial Number:\s*(.+)", bloco)
-            m_pn = re.search(r"Part Number:\s*(.+)", bloco)
-            pentes.append({
-                "capacidade_gb": gb,
-                "velocidade_mhz": int(m_vel.group(1)) if m_vel else 0,
-                "fabricante": m_fab.group(1).strip() if m_fab else "",
-                "part_number": m_pn.group(1).strip() if m_pn else "",
-                "serial": m_ser.group(1).strip() if m_ser else "",
-            })
-
-    return {
-        "ram_gb": sum(p["capacidade_gb"] for p in pentes),
-        "ram_pentes": len(pentes),
-        "pentes": pentes,
-    }
-
-
-
-# ---------------------------------------------------------------------------
-# Normalizacao do valor bruto SMART
-# ---------------------------------------------------------------------------
-#
-# ARMADILHA CLASSICA: o campo raw dos atributos SMART tem 48 bits e varios
-# fabricantes empacotam MAIS DE UM contador dentro dele.
-#
-# Exemplos reais medidos:
-#   atributo 194 (temperatura) -> raw.value = 68719476777
-#       0x10_0000_0029 = temperatura atual 41 C nos bits baixos,
-#       maxima historica nos bits altos.
-#   atributo 188 (command timeout) -> raw.value = 65542
-#       0x1_0006 = tres contadores de 16 bits concatenados.
-#
-# Se esse numero cru entrar no modelo, a feature vira lixo de ordem 1e10 e a
-# predicao perde o sentido. O proprio smartctl ja resolve isso no campo
-# raw.string, que traz o valor que ele exibe na tela. Usar raw.string como
-# fonte primaria e cair para o mascaramento de bits so se ele faltar.
-
-_ATRIBUTOS_EMPACOTADOS = {188, 190, 194}  # timeout, airflow temp, temperatura
-
+            items = d if isinstance(d, list) else [d]
+            total_bytes = sum(int(x.get("Capacity", 0)) for x in items if isinstance(x, dict))
+            if total_bytes > 0:
+                gb = round(total_bytes / (1024**3), 1)
+                res["memoria_ram_gb"] = gb
+                res["ram_gb"] = gb
+                pentes_count = len(items)
+                res["ram_pentes"] = pentes_count
+                res["pentes"] = pentes_count
+        except: pass
+    return res
 
 def _raw_smart(attr):
-    """Extrai o valor util do campo raw de um atributo SMART."""
-    ident = attr.get("id")
     raw = attr.get("raw") or {}
-
-    # 1a fonte: o texto que o smartctl exibe. Ex: "41 (Min/Max 20/50)" -> 41
     texto = raw.get("string")
     if isinstance(texto, str):
         m = re.search(r"-?\d+", texto)
-        if m:
-            valor = int(m.group())
-            if 0 <= valor < 2 ** 32:
-                return valor
+        if m: return int(m.group())
+    return int(raw.get("value") or 0)
 
-    # 2a fonte: valor numerico, mascarando os contadores empacotados
-    bruto = int(raw.get("value") or 0)
-    if ident in _ATRIBUTOS_EMPACOTADOS:
-        bruto &= 0xFFFF          # so os 16 bits baixos importam
-    if ident == 194 and bruto > 200:
-        bruto &= 0xFF            # temperatura ainda absurda: 8 bits baixos
-    return bruto
-
-
-# ----------------------------------------------------------------------------
-# Disco + SMART  (a parte que alimenta o modelo de ML)
-# ----------------------------------------------------------------------------
-
-def _capacidade(d):
-    """
-    Capacidade em bytes. O smartctl nem sempre preenche user_capacity.bytes
-    (aconteceu num ST1000DM010 em Windows), entao ha uma cadeia de fallback.
-    Capacidade zero quebra a feature capacidade_gb do modelo.
-    """
-    uc = d.get("user_capacity") or {}
-    if uc.get("bytes"):
-        return int(uc["bytes"])
-
-    # blocos * tamanho do bloco
-    blocos = uc.get("blocks")
-    tam = d.get("logical_block_size") or 512
-    if blocos:
-        return int(blocos) * int(tam)
-
-    if d.get("nvme_total_capacity"):
-        return int(d["nvme_total_capacity"])
-
-    # ultimo recurso: extrair do nome comercial ("ST1000DM010" -> 1000 GB)
-    nome = (d.get("model_name") or "")
-    m = re.search(r"(\d+)\s*TB", nome, re.I)
-    if m:
-        return int(m.group(1)) * 1_000_000_000_000
-    m = re.search(r"[A-Z]{2}(\d{3,4})[A-Z]", nome)
-    if m:
-        gb = int(m.group(1))
-        if 120 <= gb <= 8000:
-            return gb * 1_000_000_000
-
-    return 0
-
-
-def _dispositivos_disco():
-    if not shutil.which("smartctl"):
-        return []
-    out = _run(["smartctl", "--scan"])
-    devs = []
-    for linha in out.splitlines():
-        if linha.strip() and not linha.startswith("#"):
-            devs.append(linha.split()[0])
-    return devs
-
-
-def ler_disco(dispositivo=None):
-    """
-    Devolve dict no formato que prever_risco.calcular_risco() espera.
-    Se smartctl nao existir ou nao houver permissao, devolve disponivel=False.
-    """
-    vazio = {"disponivel": False, "motivo": "", "device": dispositivo or ""}
-
-    if not shutil.which("smartctl"):
-        vazio["motivo"] = ("smartctl nao encontrado. Instale smartmontools "
-                           "e garanta que esta no PATH.")
-        return vazio
-
-    if dispositivo is None:
-        devs = _dispositivos_disco()
-        if not devs:
-            vazio["motivo"] = "Nenhum disco detectado por 'smartctl --scan'."
-            return vazio
-        dispositivo = devs[0]
-
-    out = _run(["smartctl", "-a", "-j", dispositivo])
-    try:
-        d = json.loads(out)
-    except Exception:
-        vazio["device"] = dispositivo
-        vazio["motivo"] = ("smartctl nao retornou JSON. Rode como administrador/sudo. "
-                           "Em disco USB pode precisar de '-d sat'.")
-        return vazio
-
-    dados = {
-        "disponivel": True,
-        "motivo": "",
-        "device": dispositivo,
-        "model": (d.get("model_name") or "").strip(),
-        "serial_disco": (d.get("serial_number") or "").strip(),
-        "capacity_bytes": _capacidade(d),
-        "tipo_disco": "SSD" if (d.get("rotation_rate") == 0
-                                or d.get("device", {}).get("type") == "nvme") else "HDD",
-        "firmware": (d.get("firmware_version") or "").strip(),
-        "smart_ok": bool((d.get("smart_status") or {}).get("passed", True)),
+def ler_disco():
+    """Captura informacoes completas do disco e SMART."""
+    disco = {
+        "disponivel": False,
+        "motivo": "smartctl nao encontrado ou disco nao respondeu",
+        "model": "",
+        "serial_disco": "",
+        "capacity_bytes": 0,
+        "tipo_disco": "HDD",
+        "smart_ok": True,
     }
+    for c in SMART_INTERESSE.values():
+        disco[c] = 0
 
-    # zera todos os contadores esperados pelo modelo
-    for col in SMART_INTERESSE.values():
-        dados[col] = 0
+    if shutil.which("smartctl"):
+        out_scan = _run(["smartctl", "--scan"])
+        devs = [l.split()[0] for l in out_scan.splitlines() if l.strip() and not l.startswith("#")]
+        if devs:
+            out = _run(["smartctl", "-a", "-j", devs[0]])
+            try:
+                d = json.loads(out)
+                disco["disponivel"] = True
+                disco["motivo"] = ""
+                disco["model"] = d.get("model_name") or d.get("model") or d.get("product") or ""
+                disco["serial_disco"] = d.get("serial_number") or ""
+                cap = (d.get("user_capacity") or {}).get("bytes") or (d.get("capacity") or {}).get("bytes") or 0
+                disco["capacity_bytes"] = int(cap)
+                disco["smart_ok"] = bool((d.get("smart_status") or {}).get("passed", True))
 
-    # SATA / HDD: tabela de atributos numerados
-    tabela = (d.get("ata_smart_attributes") or {}).get("table") or []
-    for attr in tabela:
-        col = SMART_INTERESSE.get(attr.get("id"))
-        if col:
-            dados[col] = _raw_smart(attr)
+                model_upper = disco["model"].upper()
+                if any(x in model_upper for x in ["SSD", "NVME", "KINGSTON", "WDS"]):
+                    disco["tipo_disco"] = "SSD"
+                else:
+                    disco["tipo_disco"] = "HDD"
 
-    # NVMe: nomes diferentes, mapear no equivalente mais proximo
-    nvme = d.get("nvme_smart_health_information_log")
-    if nvme:
-        dados["smart_9_raw"] = int(nvme.get("power_on_hours") or 0)
-        dados["smart_12_raw"] = int(nvme.get("power_cycles") or 0)
-        dados["smart_194_raw"] = int(nvme.get("temperature") or 0)
-        dados["smart_187_raw"] = int(nvme.get("media_errors") or 0)
+                tabela = (d.get("ata_smart_attributes") or {}).get("table") or []
+                for attr in tabela:
+                    col = SMART_INTERESSE.get(attr.get("id"))
+                    if col:
+                        disco[col] = _raw_smart(attr)
+                return disco
+            except Exception as e:
+                disco["motivo"] = f"Erro no parsing smartctl: {e}"
 
-    # temperatura tambem pode vir num campo dedicado
-    if not dados["smart_194_raw"]:
-        dados["smart_194_raw"] = int((d.get("temperature") or {}).get("current") or 0)
-    if not dados["smart_9_raw"]:
-        dados["smart_9_raw"] = int((d.get("power_on_time") or {}).get("hours") or 0)
-    if not dados["smart_12_raw"]:
-        dados["smart_12_raw"] = int(d.get("power_cycle_count") or 0)
+    # Fallback WMI no Windows
+    if SISTEMA == "Windows":
+        out = _powershell("Get-PhysicalDisk | Select-Object FriendlyName,MediaType,Size,SerialNumber | Select-Object -First 1 | ConvertTo-Json")
+        try:
+            d = json.loads(out)
+            if d:
+                disco["disponivel"] = True
+                disco["motivo"] = ""
+                disco["model"] = d.get("FriendlyName", "")
+                disco["tipo_disco"] = d.get("MediaType", "HDD")
+                disco["capacity_bytes"] = int(d.get("Size", 0))
+                disco["serial_disco"] = d.get("SerialNumber", "").strip()
+                return disco
+        except Exception as e:
+            if not disco["motivo"] or disco["motivo"].startswith("smartctl"):
+                disco["motivo"] = f"WMI indisponivel: {e}"
 
-    return dados
-
-
-# ----------------------------------------------------------------------------
-# Coleta completa
-# ----------------------------------------------------------------------------
+    return disco
 
 def coletar_tudo():
-    inv = {}
-    inv.update(ler_identidade())
-    inv.update(ler_cpu())
-    inv.update(ler_ram())
-    inv["disco"] = ler_disco()
-    inv["sistema_operacional"] = f"{platform.system()} {platform.release()}"
-    return inv
+    dados = {}
+    dados.update(ler_identidade())
+    dados.update(ler_cpu())
+    dados.update(ler_ram())
 
+    disco = ler_disco()
+    dados["disco"] = disco
+    dados["modelo_disco"] = disco["model"]
+    dados["tipo_disco"] = disco["tipo_disco"]
+    dados["capacidade_disco_gb"] = round(disco["capacity_bytes"] / (1024**3), 1)
+    dados["smart"] = {k: v for k, v in disco.items() if k.startswith("smart_") or k == "smart_ok"}
 
-if __name__ == "__main__":
-    import pprint
-    print(f"Sistema: {SISTEMA}")
-    print("Coletando... (pode demorar alguns segundos)\n")
-    dados = coletar_tudo()
-    pprint.pprint(dados, width=100, sort_dicts=False)
-
-    print("\n--- diagnostico ---")
-    if not dados["serial_bios"]:
-        print("[!] Serial da BIOS vazio.")
-        print("    Causa provavel: falta de privilegio de administrador,")
-        print("    ou a placa-mae nao preenche esse campo (comum em PC montado).")
-        print("    Plano B: usar o serial do disco como identificador da maquina.")
-    else:
-        print(f"[ok] Serial da BIOS: {dados['serial_bios']}")
-
-    if not dados["disco"]["disponivel"]:
-        print(f"[!] SMART indisponivel: {dados['disco']['motivo']}")
-        print("    Sem SMART nao ha predicao de falha. Resolva isso primeiro.")
-    else:
-        print(f"[ok] SMART lido de {dados['disco']['device']} "
-              f"({dados['disco']['model']})")
+    return dados

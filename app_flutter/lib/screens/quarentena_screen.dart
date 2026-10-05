@@ -30,12 +30,12 @@ class QuarentenaScreen extends StatelessWidget {
               child: Column(mainAxisSize: MainAxisSize.min, children: [
                 Icon(Icons.verified_outlined, size: 50, color: CoresRisco.ok),
                 SizedBox(height: 14),
-                Text('Nenhuma maquina em quarentena.',
+                Text('Nenhuma máquina em quarentena.',
                     style: TextStyle(fontSize: 15)),
                 SizedBox(height: 6),
                 Text(
-                  'Maquinas desconhecidas detectadas na bancada\n'
-                  'aparecem aqui para o tecnico cadastrar.',
+                  'Máquinas desconhecidas detectadas na bancada\n'
+                  'aparecem aqui para o técnico cadastrar.',
                   textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 12.5, color: Color(0xFF8A8F98)),
                 ),
@@ -54,8 +54,8 @@ class QuarentenaScreen extends StatelessWidget {
                 padding: const EdgeInsets.only(bottom: 4),
                 child: Text(
                   '${itens.length} '
-                  '${itens.length == 1 ? "maquina nao identificada" : "maquinas nao identificadas"} '
-                  'aguardando decisao',
+                  '${itens.length == 1 ? "máquina não identificada" : "máquinas não identificadas"} '
+                  'aguardando decisão',
                   style: const TextStyle(
                       fontSize: 12.5, color: Color(0xFF8A8F98)),
                 ),
@@ -79,17 +79,16 @@ class QuarentenaScreen extends StatelessWidget {
                         const Icon(Icons.help_outline, color: Color(0xFF9B59B6)),
                         const SizedBox(width: 10),
                         Expanded(
-                          child: Text(m.serialBios,
+                          child: Text(m.numeroSerie,
                               style: const TextStyle(
                                   fontWeight: FontWeight.w700, fontSize: 15)),
                         ),
                         RiscoBadge(maquina: m),
                       ]),
                       const SizedBox(height: 12),
-                      Text('${m.fabricante} ${m.modeloPc}'),
+                      Text('${m.fabricante} ${m.modelo}'),
                       Text(
-                          '${m.cpu} | ${m.ramGb} GB RAM | '
-                          '${m.tipoDisco} ${m.capacidadeTexto}',
+                          '${m.processador} | ${m.memoriaRamGb} GB RAM',
                           style: const TextStyle(
                               fontSize: 12.5, color: Color(0xFF8A8F98))),
                       const SizedBox(height: 6),
@@ -98,7 +97,7 @@ class QuarentenaScreen extends StatelessWidget {
                             size: 13, color: Color(0xFF8A8F98)),
                         const SizedBox(width: 5),
                         Text(
-                            'Detectada ${formatarRelativo(m.atualizadoEm)}',
+                            'Detectada ${formatarRelativo(m.dataVisita)}',
                             style: const TextStyle(
                                 fontSize: 11.5, color: Color(0xFF8A8F98))),
                       ]),

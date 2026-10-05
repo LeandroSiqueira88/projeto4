@@ -5,29 +5,48 @@ import '../services/firestore_service.dart';
 import '../widgets/risco_badge.dart';
 import 'ficha_screen.dart';
 
-class DashboardScreen extends StatelessWidget {
-  const DashboardScreen({super.key});
+class DashboardScreen extends StatefulWidget {
+  final void Function(int aba, {String? filtro})? onNavegar;
+  const DashboardScreen({super.key, this.onNavegar});
+
+  @override
+  State<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends State<DashboardScreen> {
+  final _servico = FirestoreService();
+  late Stream<List<Maquina>> _maquinasStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _recarregar();
+  }
+
+  void _recarregar() {
+    setState(() {
+      _maquinasStream = _servico.maquinas();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    final servico = FirestoreService();
-
     return StreamBuilder<List<Maquina>>(
-      stream: servico.maquinas(),
+      stream: _maquinasStream,
       builder: (context, snap) {
         if (snap.hasError) {
-          return _Erro(mensagem: '${snap.error}');
+          return _Erro(
+            mensagem: '${snap.error}',
+            onTentarNovamente: _recarregar,
+          );
         }
         if (!snap.hasData) {
           return const Center(child: CircularProgressIndicator());
         }
 
-        // Maquinas baixadas ficam fora dos indicadores: o painel mostra o
-        // parque vigente, nao o historico de patrimonio. Elas continuam
-        // acessiveis pelo filtro "Baixadas" no inventario.
         final todas = snap.data!;
-        final maquinas = todas.where((m) => !m.baixada).toList();
-        final baixadas = todas.length - maquinas.length;
+        final maquinas = todas.where((m) => m.ativa).toList();
+        final baixadas = todas.where((m) => m.baixada).length;
         if (todas.isEmpty) return const _Vazio();
 
         final criticas =
@@ -38,27 +57,21 @@ class DashboardScreen extends StatelessWidget {
         final semDados =
             maquinas.where((m) => m.faixa == FaixaRisco.semDados).length;
         final ok = maquinas.where((m) => m.faixa == FaixaRisco.ok).length;
-        final quarentena = maquinas.where((m) => m.emQuarentena).length;
+        final quarentena = todas.where((m) => m.emQuarentena).length;
 
         return LayoutBuilder(builder: (context, restricoes) {
-          // Numero de colunas conforme a largura. A altura de cada cartao
-          // e fixa (mainAxisExtent), entao eles nao esticam em tela larga.
           final largura = restricoes.maxWidth;
-          final colunas = largura > 1100
-              ? 4
-              : largura > 760
-                  ? 3
-                  : 2;
+          final colunas = largura > 1100 ? 4 : largura > 760 ? 3 : 2;
 
           return ListView(
             padding: const EdgeInsets.all(20),
             children: [
-              const Text('Visao geral do parque',
+              const Text('Visão geral do parque',
                   style: TextStyle(fontSize: 21, fontWeight: FontWeight.w700)),
               if (baixadas > 0) ...[
                 const SizedBox(height: 3),
                 Text(
-                    '$baixadas ${baixadas == 1 ? "maquina baixada nao contabilizada" : "maquinas baixadas nao contabilizadas"}',
+                    '$baixadas ${baixadas == 1 ? "máquina baixada" : "máquinas baixadas"} não contabilizadas',
                     style: const TextStyle(
                         fontSize: 12, color: Color(0xFF8A8F98))),
               ],
@@ -70,42 +83,46 @@ class DashboardScreen extends StatelessWidget {
                 itemCount: 4,
                 gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: colunas,
-                  mainAxisExtent: 74, // altura fixa do cartao
+                  mainAxisExtent: 108, // Aumentado para acomodar variações de fonte
                   mainAxisSpacing: 12,
                   crossAxisSpacing: 12,
                 ),
                 itemBuilder: (context, i) => [
                   CartaoMetrica(
-                      titulo: 'Maquinas',
+                      titulo: 'Máquinas',
                       valor: '${maquinas.length}',
                       icone: Icons.desktop_windows_outlined,
-                      cor: const Color(0xFF4A7DD6)),
+                      cor: const Color(0xFF4A7DD6),
+                      onTap: () => widget.onNavegar?.call(1, filtro: 'todas')),
                   CartaoMetrica(
-                      titulo: 'Risco critico',
+                      titulo: 'Risco crítico',
                       valor: '${criticas.length}',
                       icone: Icons.error_outline,
-                      cor: CoresRisco.critico),
+                      cor: CoresRisco.critico,
+                      onTap: () => widget.onNavegar?.call(1, filtro: 'critico')),
                   CartaoMetrica(
-                      titulo: 'Em atencao',
+                      titulo: 'Em atenção',
                       valor: '$atencao',
                       icone: Icons.warning_amber_outlined,
-                      cor: CoresRisco.atencao),
+                      cor: CoresRisco.atencao,
+                      onTap: () => widget.onNavegar?.call(1, filtro: 'atencao')),
                   CartaoMetrica(
                       titulo: 'Quarentena',
                       valor: '$quarentena',
                       icone: Icons.help_outline,
-                      cor: const Color(0xFF9B59B6)),
+                      cor: const Color(0xFF9B59B6),
+                      onTap: () => widget.onNavegar?.call(2)),
                 ][i],
               ),
 
               const SizedBox(height: 30),
-              const Text('Distribuicao de risco',
+              const Text('Distribuição de risco',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
               const SizedBox(height: 14),
               BarraProporcao(itens: [
                 (rotulo: 'OK', valor: ok, cor: CoresRisco.ok),
-                (rotulo: 'Atencao', valor: atencao, cor: CoresRisco.atencao),
-                (rotulo: 'Critico', valor: criticas.length, cor: CoresRisco.critico),
+                (rotulo: 'Atenção', valor: atencao, cor: CoresRisco.atencao),
+                (rotulo: 'Crítico', valor: criticas.length, cor: CoresRisco.critico),
                 (rotulo: 'Sem dados', valor: semDados, cor: CoresRisco.semDados),
               ]),
 
@@ -124,7 +141,7 @@ class DashboardScreen extends StatelessWidget {
                     Icon(Icons.check_circle_outline,
                         size: 20, color: CoresRisco.ok),
                     SizedBox(width: 10),
-                    Text('Nenhuma maquina em risco critico.'),
+                    Text('Nenhuma máquina em risco crítico.'),
                   ]),
                 )
               else
@@ -132,11 +149,11 @@ class DashboardScreen extends StatelessWidget {
                       margin: const EdgeInsets.only(bottom: 8),
                       child: ListTile(
                         leading: const Icon(Icons.storage_outlined),
-                        title: Text(m.serialBios,
+                        title: Text(m.numeroSerie,
                             style:
                                 const TextStyle(fontWeight: FontWeight.w600)),
-                        subtitle: Text('${m.escolaTexto} - ${m.salaTexto}\n'
-                            '${m.modeloDisco} ${m.capacidadeTexto}'),
+                        subtitle: Text('${m.escolaTexto} - ${m.ambienteTexto}\n'
+                            '${m.fabricante} ${m.modelo}'),
                         isThreeLine: true,
                         trailing: RiscoBadge(maquina: m),
                         onTap: () => Navigator.push(
@@ -151,8 +168,8 @@ class DashboardScreen extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.only(top: 6),
                   child: Text(
-                      'e mais ${criticas.length - 8} em risco critico. '
-                      'Veja a lista completa em Inventario.',
+                      'e mais ${criticas.length - 8} em risco crítico. '
+                      'Veja a lista completa em Inventário.',
                       style: const TextStyle(
                           fontSize: 12.5, color: Color(0xFF8A8F98))),
                 ),
@@ -160,6 +177,140 @@ class DashboardScreen extends StatelessWidget {
           );
         });
       },
+    );
+  }
+}
+
+class CartaoMetrica extends StatelessWidget {
+  final String titulo;
+  final String valor;
+  final IconData icone;
+  final Color cor;
+  final VoidCallback? onTap;
+
+  const CartaoMetrica({
+    super.key,
+    required this.titulo,
+    required this.valor,
+    required this.icone,
+    required this.cor,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 0,
+      margin: EdgeInsets.zero,
+      color: cor.withValues(alpha: 0.1),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: cor.withValues(alpha: 0.2)),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          child: Row(
+            children: [
+              Icon(icone, color: cor, size: 28),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        valor,
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800,
+                          color: cor,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        titulo,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                          color: cor.withValues(alpha: 0.8),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class BarraProporcao extends StatelessWidget {
+  final List<({String rotulo, int valor, Color cor})> itens;
+
+  const BarraProporcao({super.key, required this.itens});
+
+  @override
+  Widget build(BuildContext context) {
+    final total = itens.fold(0, (sum, item) => sum + item.valor);
+    if (total == 0) return const SizedBox();
+
+    return Column(
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: SizedBox(
+            height: 12,
+            child: Row(
+              children: itens.map((item) {
+                final perc = item.valor / total;
+                if (perc == 0) return const SizedBox();
+                return Flexible(
+                  flex: (perc * 1000).toInt(),
+                  child: Container(color: item.cor),
+                );
+              }).toList(),
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 20,
+          runSpacing: 8,
+          children: itens.map((item) {
+            final perc = (item.valor / total * 100).toStringAsFixed(0);
+            return Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 10,
+                  height: 10,
+                  decoration: BoxDecoration(
+                    color: item.cor,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  '${item.rotulo}: ${item.valor} ($perc%)',
+                  style: const TextStyle(fontSize: 12),
+                ),
+              ],
+            );
+          }).toList(),
+        ),
+      ],
     );
   }
 }
@@ -175,7 +326,7 @@ class _Vazio extends StatelessWidget {
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           Icon(Icons.inbox_outlined, size: 52, color: Color(0xFF8A8F98)),
           SizedBox(height: 14),
-          Text('Nenhuma maquina no inventario ainda.',
+          Text('Nenhuma máquina no inventário ainda.',
               style: TextStyle(fontSize: 16)),
           SizedBox(height: 6),
           Text('Rode a bancada: python bancada/main.py',
@@ -188,7 +339,8 @@ class _Vazio extends StatelessWidget {
 
 class _Erro extends StatelessWidget {
   final String mensagem;
-  const _Erro({required this.mensagem});
+  final VoidCallback onTentarNovamente;
+  const _Erro({required this.mensagem, required this.onTentarNovamente});
 
   @override
   Widget build(BuildContext context) {
@@ -203,17 +355,23 @@ class _Erro extends StatelessWidget {
           const SizedBox(height: 14),
           Text(
               semPermissao
-                  ? 'Sem permissao para ler o banco.'
+                  ? 'Sem permissão para ler o banco.'
                   : 'Erro ao carregar os dados.',
               style: const TextStyle(fontSize: 16)),
           const SizedBox(height: 8),
           Text(
               semPermissao
-                  ? 'As regras do Firestore exigem usuario autenticado.\n'
+                  ? 'As regras do Firestore exigem usuário autenticado.\n'
                       'Saia e entre novamente.'
                   : mensagem,
               textAlign: TextAlign.center,
               style: const TextStyle(fontSize: 12.5, color: Color(0xFF8A8F98))),
+          const SizedBox(height: 20),
+          ElevatedButton.icon(
+            onPressed: onTentarNovamente,
+            icon: const Icon(Icons.refresh, size: 18),
+            label: const Text('Tentar Novamente'),
+          ),
         ]),
       ),
     );

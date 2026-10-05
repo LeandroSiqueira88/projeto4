@@ -42,7 +42,7 @@ class _DialogoBaixaState extends State<DialogoBaixa> {
     });
 
     try {
-      await _servico.darBaixa(widget.maquina.serialBios, _motivo!,
+      await _servico.darBaixa(widget.maquina.numeroSerie, _motivo!,
           observacao: _observacao.text.trim());
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
@@ -65,7 +65,7 @@ class _DialogoBaixaState extends State<DialogoBaixa> {
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           Align(
             alignment: Alignment.centerLeft,
-            child: Text(widget.maquina.serialBios,
+            child: Text(widget.maquina.numeroSerie,
                 style: const TextStyle(
                     fontSize: 12.5,
                     fontFamily: 'monospace',
@@ -179,7 +179,7 @@ class _DialogoExclusaoState extends State<DialogoExclusao> {
 
   bool get _podeExcluir =>
       _confirmacao.text.trim().toUpperCase() ==
-          widget.maquina.serialBios.toUpperCase() &&
+          widget.maquina.numeroSerie.toUpperCase() &&
       _motivo.text.trim().isNotEmpty;
 
   Future<void> _excluir() async {
@@ -190,7 +190,7 @@ class _DialogoExclusaoState extends State<DialogoExclusao> {
 
     try {
       await _servico.excluirDefinitivo(
-          widget.maquina.serialBios, _motivo.text.trim());
+          widget.maquina.numeroSerie, _motivo.text.trim());
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
       if (mounted) {
@@ -243,16 +243,16 @@ class _DialogoExclusaoState extends State<DialogoExclusao> {
           ),
           const SizedBox(height: 14),
 
-          Align(
+          const Align(
             alignment: Alignment.centerLeft,
             child: Text('Digite o serial para confirmar:',
-                style: const TextStyle(
+                style: TextStyle(
                     fontSize: 12.5, color: Color(0xFF8A8F98))),
           ),
           const SizedBox(height: 4),
           Align(
             alignment: Alignment.centerLeft,
-            child: SelectableText(widget.maquina.serialBios,
+            child: SelectableText(widget.maquina.numeroSerie,
                 style: const TextStyle(
                     fontSize: 13,
                     fontFamily: 'monospace',

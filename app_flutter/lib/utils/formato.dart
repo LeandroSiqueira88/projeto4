@@ -2,11 +2,12 @@
 ///
 /// Evita mostrar "2026-09-20T10:37:14.123456+00:00" na tela. O tecnico
 /// precisa saber ha quanto tempo a maquina foi vista, nao o timestamp exato.
+library;
 
 String formatarData(DateTime? data) {
   if (data == null) return '--';
   final d = data.toLocal();
-  final dois = (int n) => n.toString().padLeft(2, '0');
+  String dois(int n) => n.toString().padLeft(2, '0');
   return '${dois(d.day)}/${dois(d.month)}/${d.year} ${dois(d.hour)}:${dois(d.minute)}';
 }
 

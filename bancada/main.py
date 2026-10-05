@@ -25,6 +25,7 @@ import argparse
 import json
 import os
 import sys
+import uuid
 from datetime import datetime, timezone
 
 import arduino
@@ -61,6 +62,58 @@ def cabecalho(cfg):
     print("=" * 66)
 
 
+ARQUIVO_ESCOLAS = os.path.join(DIR, "escolas.json")
+
+
+def carregar_escolas():
+    if os.path.exists(ARQUIVO_ESCOLAS):
+        try:
+            with open(ARQUIVO_ESCOLAS, encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return [
+        {"cie": "999001", "escola": "EE Prof. Joao", "endereco": "Rua das Flores, 123", "sala": "Lab 01"},
+        {"cie": "999002", "escola": "EE Maria da Silva", "endereco": "Av. Brasil, 500", "sala": "Sala de Informatica"},
+    ]
+
+
+def obter_vinculo_escola(serial, simular=False):
+    print("\n[2/5] Consultando cadastro e vinculo escolar...")
+    conhecida = None if simular else fb.buscar_maquina(serial)
+
+    if conhecida and conhecida.get("cie"):
+        cie = conhecida.get("cie", "")
+        escola = conhecida.get("escola") or conhecida.get("escola_nome", "")
+        sala = conhecida.get("sala") or conhecida.get("ambiente", "")
+        print(f"{C_VERDE}      Maquina ja cadastrada:{C_OFF}")
+        print(f"      CIE    : {cie}")
+        print(f"      Escola : {escola}")
+        print(f"      Sala   : {sala}")
+        resp = input(f"      Deseja manter este vinculo? [S/n]: ").strip().lower()
+        if resp in ("", "s", "sim"):
+            return cie, escola, sala, "ativo"
+
+    escolas = carregar_escolas()
+    cie_input = input("\n      >>> Digite o CIE da escola: ").strip()
+
+    encontrada = next((e for e in escolas if e["cie"] == cie_input), None)
+    if encontrada:
+        cie = encontrada["cie"]
+        escola = encontrada["escola"]
+        sala_padrao = encontrada.get("sala") or encontrada.get("endereco", "Sala Geral")
+        sala = input(f"      Digite a Sala / Ambiente [{sala_padrao}]: ").strip() or sala_padrao
+        print(f"{C_VERDE}      Escola: {escola} | Ambiente/Sala: {sala}{C_OFF}")
+    else:
+        print(f"{C_AMAR}      CIE não encontrado. Digite o CIE, a escola e o ambiente/sala:{C_OFF}")
+        cie = input("      Digite o CIE: ").strip() or (cie_input if cie_input else "999999")
+        escola = input("      Digite o nome da Escola: ").strip() or "Escola Customizada"
+        sala = input("      Digite a Sala / Ambiente / Endereço: ").strip() or "Sala Geral"
+        print(f"{C_VERDE}      Vinculada a: {escola} (CIE {cie}) - {sala}{C_OFF}")
+
+    return cie, escola, sala, "ativo"
+
+
 def executar_ciclo(cfg, banca, simular=False):
     inicio = datetime.now(timezone.utc)
 
@@ -69,20 +122,18 @@ def executar_ciclo(cfg, banca, simular=False):
     inv = hw.coletar_tudo()
     disco = inv["disco"]
 
-    # Cadeia de identificacao: BIOS -> placa-mae -> disco.
+    # Cadeia de identificacao: BIOS -> placa-mae -> disco -> UUID fallback.
     # PC montado (sem fabricante OEM) quase sempre cai para placa-mae ou disco.
     serial = inv["serial_bios"]
     origem = inv.get("origem_serial") or ""
     if not serial:
         serial = disco.get("serial_disco") or ""
-        origem = "disco (fallback)"
+        origem = "disco"
 
     if not serial:
-        print(f"{C_VERM}      Nenhum identificador encontrado.{C_OFF}")
-        print("      Rode como administrador/sudo e confira o smartctl.")
-        if banca:
-            banca.sinalizar("QUARENTENA")
-        return None
+        serial = f"UUID-{uuid.uuid4().hex[:12].upper()}"
+        origem = "UUID (fallback)"
+        print(f"{C_AMAR}      [AVISO] Nenhum serial de hardware valido. Gerado fallback: {serial}{C_OFF}")
 
     print(f"      Serial      : {serial}  ({origem})")
     print(f"      Modelo      : {inv['fabricante']} {inv['modelo_pc']}")
@@ -96,16 +147,23 @@ def executar_ciclo(cfg, banca, simular=False):
     else:
         print(f"{C_AMAR}      Disco       : SMART indisponivel - {disco['motivo']}{C_OFF}")
 
-    # ---- 2. cadastro / quarentena ----
-    print("\n[2/5] Consultando cadastro...")
-    conhecida = None if simular else fb.buscar_maquina(serial)
-    if conhecida:
-        print(f"{C_VERDE}      Cadastrada: {conhecida.get('escola', '?')} / "
-              f"{conhecida.get('sala', '?')}{C_OFF}")
-        status_cadastro = "ativo"
-    else:
-        print(f"{C_AMAR}      Maquina nao cadastrada -> QUARENTENA{C_OFF}")
-        status_cadastro = "quarentena"
+    # ---- 2. cadastro / vinculo escolar & avaliacao técnica ----
+    cie, escola, sala, status_cadastro = obter_vinculo_escola(serial, simular)
+
+    print("\n      --- Dados de Operação e Avaliação Técnica ---")
+    operador_padrao = cfg.get("operador", "Técnico URE")
+    operador = input(f"      Nome do Técnico Responsável [{operador_padrao}]: ").strip() or operador_padrao
+
+    print("      Avaliação Técnica do Equipamento:")
+    print("        [1] Bom")
+    print("        [2] Regular")
+    print("        [3] Ruim")
+    print("        [4] Defeituoso")
+    aval_esc = input("      >>> Escolha a avaliação [1-4, padrão 1]: ").strip()
+    mapa_aval = {"1": "Bom", "2": "Regular", "3": "Ruim", "4": "Defeituoso"}
+    avaliacao_tecnica = mapa_aval.get(aval_esc, "Bom")
+    observacao = input("      Observações (ex: teclas/tela quebrada, teclado USB) [Opcional]: ").strip()
+    print(f"      Técnico: {operador} | Avaliação: {avaliacao_tecnica} | Obs: {observacao or '-'}")
 
     # ---- 3. predicao ----
     print("\n[3/5] Calculando risco de falha do disco...")
@@ -141,21 +199,40 @@ def executar_ciclo(cfg, banca, simular=False):
     print("\n[5/5] Enviando para o Firestore...")
     registro = {
         "serial_bios": serial,
+        "id_dispositivo": serial,
         "origem_serial": origem,
+        "tipo_identificador": origem,
+        "hostname": inv.get("hostname", ""),
         "fabricante": inv["fabricante"],
         "modelo_pc": inv["modelo_pc"],
         "sistema_operacional": inv["sistema_operacional"],
-        "cpu": inv["cpu"], "cpu_cores": inv["cpu_cores"],
-        "cpu_threads": inv["cpu_threads"], "cpu_freq_ghz": inv["cpu_freq_ghz"],
-        "ram_gb": inv["ram_gb"], "ram_pentes": inv["ram_pentes"],
+        "cpu": inv["cpu"],
+        "processador": inv["cpu"],
+        "cpu_cores": inv["cpu_cores"],
+        "cpu_threads": inv["cpu_threads"],
+        "cpu_freq_ghz": inv["cpu_freq_ghz"],
+        "ram_gb": inv["ram_gb"],
+        "memoria_ram_gb": inv["ram_gb"],
+        "ram_pentes": inv["ram_pentes"],
         "pentes": inv["pentes"],
         "disco": disco,
         "risco_falha": risco["risco"] if risco else None,
         "risco_faixa": faixa,
         "status": status_cadastro,
+        "status_validacao": status_cadastro,
         "id_bancada": cfg["id_bancada"],
         "ure": cfg["ure"],
-        "operador": cfg["operador"],
+        "ure_diretoria": cfg["ure"],
+        "operador": operador,
+        "tecnico_responsavel": operador,
+        "avaliacao_tecnica": avaliacao_tecnica,
+        "avaliacao": avaliacao_tecnica,
+        "observacoes": observacao,
+        "cie": cie,
+        "escola": escola,
+        "escola_nome": escola,
+        "sala": sala,
+        "ambiente": sala,
     }
 
     if simular:

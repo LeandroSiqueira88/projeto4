@@ -1,0 +1,20 @@
+[
+  {
+    "cie": "999001",
+    "escola": "EE Prof. Joao",
+    "endereco": "Rua das Flores, 123 - Centro",
+    "sala": "Lab 01"
+  },
+  {
+    "cie": "999002",
+    "escola": "EE Maria da Silva",
+    "endereco": "Av. Brasil, 500 - Jardim America",
+    "sala": "Sala de Informatica"
+  },
+  {
+    "cie": "999003",
+    "escola": "EE Dom Pedro II",
+    "endereco": "Praça Civica, s/n - Vila Nova",
+    "sala": "Biblioteca"
+  }
+]
