@@ -25,6 +25,7 @@ RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(RAIZ, "bancada"))
 
 import firebase_client as fb          # noqa: E402
+import higienizacao                    # noqa: E402
 import prever_risco                    # noqa: E402
 
 CSV_MAQ = os.path.join(RAIZ, "ml", "data", "maquinas.csv")
@@ -109,9 +110,12 @@ def main():
             "risco_faixa": risco["faixa"],
             "status": "quarentena" if em_quar else "ativo",
             "id_bancada": "URE-01-BANCADA-01",
-            "ure": "URE Exemplo",
+            "ure": "Ribeirão Preto",
             "operador": "carga_inicial",
         }
+
+        # Aplicar higienizacao unificada
+        registro = higienizacao.higienizar_registro(registro)
 
         if risco["faixa"] == "CRITICO":
             criticos += 1
