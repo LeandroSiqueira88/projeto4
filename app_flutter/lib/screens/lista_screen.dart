@@ -101,12 +101,51 @@ class _ListaScreenState extends State<ListaScreen> {
               stream: _maquinasStream,
               builder: (context, snap) {
                 final itens = snap.hasData ? snap.data!.where(_passa).toList() : <Maquina>[];
-                return Tooltip(
-                  message: 'Exportar Relatório (CSV)',
-                  child: FilledButton.tonalIcon(
-                    onPressed: () => exportarECompartilharCsv(context, itens),
-                    icon: const Icon(Icons.download_rounded, size: 18),
-                    label: const Text('Exportar'),
+                return PopupMenuButton<String>(
+                  tooltip: 'Opções de Exportação',
+                  onSelected: (value) {
+                    if (value == 'csv') {
+                      exportarCsvDireto(context, itens);
+                    } else if (value == 'pdf') {
+                      exportarPdfDireto(context, itens);
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(
+                      value: 'csv',
+                      child: Row(
+                        children: [
+                          Icon(Icons.table_chart_rounded, size: 18, color: Colors.green),
+                          SizedBox(width: 8),
+                          Text('Exportar para CSV (Excel)'),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'pdf',
+                      child: Row(
+                        children: [
+                          Icon(Icons.picture_as_pdf_rounded, size: 18, color: Colors.red),
+                          SizedBox(width: 8),
+                          Text('Exportar para PDF (Relatório)'),
+                        ],
+                      ),
+                    ),
+                  ],
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.primary,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: const [
+                        Icon(Icons.download_rounded, size: 18, color: Colors.white),
+                        SizedBox(width: 8),
+                        Text('Exportar', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500)),
+                      ],
+                    ),
                   ),
                 );
               },
