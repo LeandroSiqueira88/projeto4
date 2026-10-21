@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/maquina.dart';
 import '../services/firestore_service.dart';
+import '../utils/exportador.dart';
 import '../utils/formato.dart';
 import '../widgets/risco_badge.dart';
 import 'ficha_screen.dart';
@@ -72,24 +73,45 @@ class _ListaScreenState extends State<ListaScreen> {
     return Column(children: [
       Padding(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-        child: TextField(
-          controller: _busca,
-          onChanged: (_) => setState(() {}),
-          decoration: InputDecoration(
-            hintText: 'Buscar por serial, escola, ambiente ou modelo',
-            prefixIcon: const Icon(Icons.search),
-            border: const OutlineInputBorder(),
-            isDense: true,
-            suffixIcon: _busca.text.isEmpty
-                ? null
-                : IconButton(
-              icon: const Icon(Icons.close, size: 19),
-              onPressed: () {
-                _busca.clear();
-                setState(() {});
+        child: Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: _busca,
+                onChanged: (_) => setState(() {}),
+                decoration: InputDecoration(
+                  hintText: 'Buscar por serial, escola, ambiente ou modelo',
+                  prefixIcon: const Icon(Icons.search),
+                  border: const OutlineInputBorder(),
+                  isDense: true,
+                  suffixIcon: _busca.text.isEmpty
+                      ? null
+                      : IconButton(
+                    icon: const Icon(Icons.close, size: 19),
+                    onPressed: () {
+                      _busca.clear();
+                      setState(() {});
+                    },
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            StreamBuilder<List<Maquina>>(
+              stream: _maquinasStream,
+              builder: (context, snap) {
+                final itens = snap.hasData ? snap.data!.where(_passa).toList() : <Maquina>[];
+                return Tooltip(
+                  message: 'Exportar Relatório (CSV)',
+                  child: FilledButton.tonalIcon(
+                    onPressed: () => exportarECompartilharCsv(context, itens),
+                    icon: const Icon(Icons.download_rounded, size: 18),
+                    label: const Text('Exportar'),
+                  ),
+                );
               },
             ),
-          ),
+          ],
         ),
       ),
       SingleChildScrollView(
