@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/maquina.dart';
 import '../services/firestore_service.dart';
+import '../utils/exportador.dart';
 import '../utils/formato.dart';
 import '../widgets/risco_badge.dart';
 import 'ficha_screen.dart';
@@ -72,24 +73,84 @@ class _ListaScreenState extends State<ListaScreen> {
     return Column(children: [
       Padding(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-        child: TextField(
-          controller: _busca,
-          onChanged: (_) => setState(() {}),
-          decoration: InputDecoration(
-            hintText: 'Buscar por serial, escola, ambiente ou modelo',
-            prefixIcon: const Icon(Icons.search),
-            border: const OutlineInputBorder(),
-            isDense: true,
-            suffixIcon: _busca.text.isEmpty
-                ? null
-                : IconButton(
-              icon: const Icon(Icons.close, size: 19),
-              onPressed: () {
-                _busca.clear();
-                setState(() {});
+        child: Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: _busca,
+                onChanged: (_) => setState(() {}),
+                decoration: InputDecoration(
+                  hintText: 'Buscar por serial, escola, ambiente ou modelo',
+                  prefixIcon: const Icon(Icons.search),
+                  border: const OutlineInputBorder(),
+                  isDense: true,
+                  suffixIcon: _busca.text.isEmpty
+                      ? null
+                      : IconButton(
+                    icon: const Icon(Icons.close, size: 19),
+                    onPressed: () {
+                      _busca.clear();
+                      setState(() {});
+                    },
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            StreamBuilder<List<Maquina>>(
+              stream: _maquinasStream,
+              builder: (context, snap) {
+                final itens = snap.hasData ? snap.data!.where(_passa).toList() : <Maquina>[];
+                return PopupMenuButton<String>(
+                  tooltip: 'Opções de Exportação',
+                  onSelected: (value) {
+                    if (value == 'csv') {
+                      exportarCsvDireto(context, itens);
+                    } else if (value == 'pdf') {
+                      exportarPdfDireto(context, itens);
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(
+                      value: 'csv',
+                      child: Row(
+                        children: [
+                          Icon(Icons.table_chart_rounded, size: 18, color: Colors.green),
+                          SizedBox(width: 8),
+                          Text('Exportar para CSV (Excel)'),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'pdf',
+                      child: Row(
+                        children: [
+                          Icon(Icons.picture_as_pdf_rounded, size: 18, color: Colors.red),
+                          SizedBox(width: 8),
+                          Text('Exportar para PDF (Relatório)'),
+                        ],
+                      ),
+                    ),
+                  ],
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.primary,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: const [
+                        Icon(Icons.download_rounded, size: 18, color: Colors.white),
+                        SizedBox(width: 8),
+                        Text('Exportar', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500)),
+                      ],
+                    ),
+                  ),
+                );
               },
             ),
-          ),
+          ],
         ),
       ),
       SingleChildScrollView(

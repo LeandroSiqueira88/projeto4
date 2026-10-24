@@ -59,6 +59,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
         final ok = maquinas.where((m) => m.faixa == FaixaRisco.ok).length;
         final quarentena = todas.where((m) => m.emQuarentena).length;
 
+        final escolasMap = <String, int>{};
+        for (var m in maquinas) {
+          final escola = m.escolaTexto;
+          escolasMap[escola] = (escolasMap[escola] ?? 0) + 1;
+        }
+        final escolasOrdenadas = escolasMap.entries.toList()
+          ..sort((a, b) => b.value.compareTo(a.value));
+
         return LayoutBuilder(builder: (context, restricoes) {
           final largura = restricoes.maxWidth;
           final colunas = largura > 1100 ? 4 : largura > 760 ? 3 : 2;
@@ -125,6 +133,48 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 (rotulo: 'Crítico', valor: criticas.length, cor: CoresRisco.critico),
                 (rotulo: 'Sem dados', valor: semDados, cor: CoresRisco.semDados),
               ]),
+
+              const SizedBox(height: 30),
+              const Text('Distribuição por escola',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 12),
+              Card(
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: BorderSide(color: Colors.grey.withValues(alpha: 0.2)),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(14),
+                  child: Column(
+                    children: escolasOrdenadas.take(6).map((entry) {
+                      final perc = maquinas.isEmpty
+                          ? 0.0
+                          : (entry.value / maquinas.length * 100);
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(entry.key,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.w500,
+                                      fontSize: 13)),
+                            ),
+                            const SizedBox(width: 12),
+                            Text('${entry.value} (${perc.toStringAsFixed(0)}%)',
+                                style: const TextStyle(
+                                    fontSize: 12.5,
+                                    color: Color(0xFF8A8F98),
+                                    fontWeight: FontWeight.w600)),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ),
 
               const SizedBox(height: 32),
               const Text('Trocar com prioridade',

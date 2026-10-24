@@ -1,8 +1,22 @@
 # Bancada de Validação Física e Inventário Preditivo
 
 **UNIVESP — PJI410 · Projeto Integrador em Computação IV**
+**Polo: Ribeirão Preto / SP**
 
 Sistema que identifica computadores de escolas públicas em uma bancada física, avalia a saúde do disco com aprendizado de máquina, sinaliza o resultado em LEDs via Arduino e publica o inventário em nuvem, consultável por um app Flutter em tempo real.
+
+---
+
+## 👥 Equipe e Créditos (Grupo de 6 Integrantes)
+
+| Integrante / Aluno(a)       | RA | Polo |
+|-----------------------------|---|---|
+| Bruno Luiz Rodrigues        | 23211921| Ribeirão Preto / SP |
+| Elias Isac de Sousa         | 23201771| Santa Cruz da Esperança/ SP |
+| Luis Francisco da Silva Patrocinio Marques Correa    | 2106664| Ribeirão Preto / SP |
+| Luis Otavio Nogueira Bortolozzo    | 23205453| Ribeirão Preto / SP |
+| Leandro de Caires Siqueira    | 23214764| Ribeirão Preto / SP |
+| Ricardo Leal Lencini    | 2321460623214606| Ribeirão Preto / SP |
 
 ---
 

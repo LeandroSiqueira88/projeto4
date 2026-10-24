@@ -1,20 +1,614 @@
 [
   {
-    "cie": "999001",
-    "escola": "EE Prof. Joao",
-    "endereco": "Rua das Flores, 123 - Centro",
-    "sala": "Lab 01"
+    "cie": "24399",
+    "escola": "EE Abel dos Reis",
+    "endereco": "ANTONIO CORREA NEVES, 279 - CENTRO, CASSIA DOS COQUEIROS - SP, 14260000",
+    "sala": "Sala Geral"
   },
   {
-    "cie": "999002",
-    "escola": "EE Maria da Silva",
-    "endereco": "Av. Brasil, 500 - Jardim America",
-    "sala": "Sala de Informatica"
+    "cie": "24375",
+    "escola": "EE Agenor Medeiros Prof",
+    "endereco": "JOSE SILVEIRA, 954 - BENTO QUIRINO, SAO SIMAO - SP, 14200000",
+    "sala": "Sala Geral"
   },
   {
-    "cie": "999003",
-    "escola": "EE Dom Pedro II",
-    "endereco": "Praça Civica, s/n - Vila Nova",
-    "sala": "Biblioteca"
+    "cie": "48446",
+    "escola": "EE Alberto Ferriani Prof",
+    "endereco": "FREDERICO GALLACHO, 100 - ANTONIO MARINCEK, RIBEIRAO PRETO - SP, 14061089",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "23978",
+    "escola": "EE Alberto José Gonçalves D",
+    "endereco": "FLAVIO UCHOA, 916 - CAMPOS ELISEOS, RIBEIRAO PRETO - SP, 14080430",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "23851",
+    "escola": "EE Alberto Santos Dumont",
+    "endereco": "SAO SALVADOR, 176 - SUMAREZINHO, RIBEIRAO PRETO - SP, 14055260",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "23930",
+    "escola": "EE Alcides Correa",
+    "endereco": "MOREIRA DE OLIVEIRA, 242 - ALTO BOA VISTA, RIBEIRAO PRETO - SP, 14025300",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "24089",
+    "escola": "EE Alpheu Dominiquetti",
+    "endereco": "FELICIANO ALVES FARIA, 273 - VILA ABRANCHES, RIBEIRAO PRETO - SP, 14093160",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "23917",
+    "escola": "EE Amélia dos Santos Musa",
+    "endereco": "ESPIRITO SANTO, 887 - IPIRANGA, RIBEIRAO PRETO - SP, 14055030",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "49566",
+    "escola": "EE Antonio Augusto L Oliveira Jr Prof",
+    "endereco": "PREFEITO JOSE PIMENTA NEVES, 512 - VILA LIDIA, BATATAIS - SP, 14315102",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "22901",
+    "escola": "EE Antonio Barreiros Prof",
+    "endereco": "JOAO MONTANS, 1 - GINASIO, ALTINOPOLIS - SP, 14350000",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "23848",
+    "escola": "EE Antonio Diederichsen",
+    "endereco": "GOIAS, 610 - CAMPOS ELISEOS, RIBEIRAO PRETO - SP, 14080260",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "24223",
+    "escola": "E.E. Coronel Arthur Pires",
+    "endereco": "NILO PECANHA, 132 - JARDIM ALVORADA, LUIS ANTONIO - SP, 14210000",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "905800",
+    "escola": "EE Aymar B Prado Prof Dr",
+    "endereco": "MINISTRO VICTOR NUNES LEAL, 200 - PARQUE RESIDENCIAL CIDADE UNIVERSITARIA, RIBEIRAO PRETO - SP, 14051370",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "462792",
+    "escola": "EE Francisco Castilho",
+    "endereco": "NERIO BISUTTI, 143 - FRANCISCO CASTILHO, CRAVINHOS - SP, 14140000",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "23826",
+    "escola": "EE Conego Barros",
+    "endereco": "DOUTOR FRANCISCO JUNQUEIRA, 726 - CENTRO, RIBEIRAO PRETO - SP, 14010030",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "905811",
+    "escola": "EE Baudilio Biagi",
+    "endereco": "STELLA VERGINIO DOS SANTOS SIMIONATO, 190 - ADELINO SIMIONI, RIBEIRAO PRETO - SP, 14071230",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "900734",
+    "escola": "EE Benedito Maciel Arantes Prof",
+    "endereco": "ANTONIO PACCAGNELLA, 205 - ADELINO SIMIONI, RIBEIRAO PRETO - SP, 14071590",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "23000",
+    "escola": "EE Cândido Portinari",
+    "endereco": "CORONEL NOGUEIRA, 1 - CASTELO, BATATAIS - SP, 14300168",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "980024",
+    "escola": "EE CEEJA Cecilia D Caram Prof I",
+    "endereco": "GUARUJA, 1159 - JARDIM PAULISTANO, RIBEIRAO PRETO - SP, 14090283",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "24090",
+    "escola": "EE Cid de Oliveira Leite Prof",
+    "endereco": "ITARARE, 608 - JARDIM PAULISTA, RIBEIRAO PRETO - SP, 14090070",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "915555",
+    "escola": "EE Cordelia R Ragoso Prof",
+    "endereco": "FRANCISCO ALEXANDRE, 205 - SAN LEANDRO, RIBEIRAO PRETO - SP, 14110000",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "566780",
+    "escola": "EE Antônio Calixto Deputado",
+    "endereco": "LUIS FELICIO, 700 - JARDIM DOUTOR PAULO GOMES ROMEO, RIBEIRAO PRETO - SP, 14056735",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "47466",
+    "escola": "EE Djanira Velho Praf",
+    "endereco": "BORBA GATO, 60 - VILA AMELIA, RIBEIRAO PRETO - SP, 14050340",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "44660",
+    "escola": "EE Domingos JB Spinelli Prof Dr",
+    "endereco": "DEPUTADO ORLANDO JURCA, 92 - QUINTINO FACCI II, RIBEIRAO PRETO - SP, 14070280",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "24168",
+    "escola": "EE Thomaz Alberto Whately Dr",
+    "endereco": "MARQUES DE POMBAL, 349 - CAMPOS ELISEOS, RIBEIRAO PRETO - SP, 14080100",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "24120",
+    "escola": "EE Edgardo Cajado",
+    "endereco": "GENERAL CAMARA, 157 - IPIRANGA, RIBEIRAO PRETO - SP, 14055080",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "925676",
+    "escola": "EE Esplanada da Estação",
+    "endereco": "SERRA NEGRA, 100 - JARDIM IARA, RIBEIRAO PRETO - SP, 14078640",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "24065",
+    "escola": "EE Eugenia V de Morais Prof",
+    "endereco": "ABILIO SAMPAIO, 900 - VILA VIRGINIA, RIBEIRAO PRETO - SP, 14030420",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "907881",
+    "escola": "EE Expedicionários Brasileiros",
+    "endereco": "ORIVALDO BRAGA, 617 - JARDIM SAO JOSE, RIBEIRAO PRETO - SP, 14098080",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "23796",
+    "escola": "EE Fábio Barreto",
+    "endereco": "AMADOR BUENO, 220 - CENTRO, RIBEIRAO PRETO - SP, 14010070",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "900631",
+    "escola": "EE Fernando C Rosas Prof",
+    "endereco": "ANGELO DAMIAO, 176 - JARDIM ITAPUA, CRAVINHOS - SP, 14140000",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "23966",
+    "escola": "EE Francisco Bonfim",
+    "endereco": "PARANAGUA, 1011 - VILA ALBERTINA, RIBEIRAO PRETO - SP, 14060100",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "24016",
+    "escola": "EE Francisco da C Junqueira Dr",
+    "endereco": "JAIR COSTA, SN - CENTRO, RIBEIRAO PRETO - SP, 14110000",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "24296",
+    "escola": "EE Francisco Ferreira de Freitas",
+    "endereco": "PADRE SOARES, 5 - CENTRO, SERRA AZUL - SP, 14230000",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "24260",
+    "escola": "EE Francisco Gomes Prof",
+    "endereco": "PROFESSOR ANTONIO DA SILVEIRA, 274 - JARDIM BELA VISTA, CRAVINHOS - SP, 14140000",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "24314",
+    "escola": "EE Francisco Matarazzo Conde",
+    "endereco": "7 DE SETEMBRO, 474 - CENTRO, SANTA ROSA DE VITERBO - SP, 14270000",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "22330",
+    "escola": "EE Galdino de Castro",
+    "endereco": "JOAQUIM CANDIDO GARCIA, 296 - CENTRO, CAJURU - SP, 14240000",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "37151",
+    "escola": "EE Geraldo C de Carvalho Dr",
+    "endereco": "ITAGUACU, 869 - IPIRANGA, RIBEIRAO PRETO - SP, 14060030",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "903498",
+    "escola": "EE Geraldo Torrano Prof",
+    "endereco": "URUGUAI, 800 - COHAB TERESA SANDRILLI TINCANI, CAJURU - SP, 14240000",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "906759",
+    "escola": "EE Geraldo Tristão de Lima Prof",
+    "endereco": "CORONEL OVIDIO, 720 - RIACHUELO, BATATAIS - SP, 14315384",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "903462",
+    "escola": "EE Getúlio Vargas",
+    "endereco": "DOUTOR DOMINGOS SGORLON, 270 - AVELINO ALVES PALMA, RIBEIRAO PRETO - SP, 14070660",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "23899",
+    "escola": "EE Glete de Alcântara Prof",
+    "endereco": "PROFESSOR WLADEMIR PINTO FERRAZ, 156 - PARQUE RIBEIRAO PRETO, RIBEIRAO PRETO - SP, 14031440",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "909737",
+    "escola": "EE Glória dos S Fonseca Prof",
+    "endereco": "MANAUS, 1735 - IPIRANGA, RIBEIRAO PRETO - SP, 14060520",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "24028",
+    "escola": "EE Guimarães Júnior Dr",
+    "endereco": "LAFAIETE, 584 - CENTRO, RIBEIRAO PRETO - SP, 14015080",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "900761",
+    "escola": "EE Hélio Lourenço de Oliveira Prof",
+    "endereco": "GONCALVES DE MAGALHAES, 1500 - JARDIM PIRATININGA, RIBEIRAO PRETO - SP, 14030570",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "24156",
+    "escola": "EE Hely Lopes Meirelles",
+    "endereco": "SAO PAULO, 726 - CAMPOS ELISEOS, RIBEIRAO PRETO - SP, 14085010",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "23905",
+    "escola": "EE Herminia Gugliano Prof",
+    "endereco": "DOUTOR JORGE LOBATO, 765 - VILA TIBERIO, RIBEIRAO PRETO - SP, 14050110",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "900072",
+    "escola": "EE Irene Dias Ribeiro Prof",
+    "endereco": "DOUTOR ANTONIO SYLVIO CUNHA BUENO, 205 - GERALDO CORREIA DE CARVALHO, RIBEIRAO PRETO - SP, 14061380",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "922687",
+    "escola": "EE Jardim das Rosas",
+    "endereco": "JOAQUIM DOS SANTOS, 890 - JARDIM DAS ROSAS, SERRANA - SP, 14150000",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "350588",
+    "escola": "EE Jd Diva Tarla de Carvalho",
+    "endereco": "JOAO TONIOLLI, 3475 - JARDIM DIVA TARLA DE CARVALHO, RIBEIRAO PRETO - SP, 14079390",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "41531",
+    "escola": "EE Jenny TP Schroeder Prof",
+    "endereco": "CAROLINA MARIA DE JESUS, 625 - IPIRANGA, RIBEIRAO PRETO - SP, 14060330",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "918155",
+    "escola": "EE Jesus Guilherme Giacomini",
+    "endereco": "PROFESSOR RENATO JARDIM, 646 - PARQUE RIBEIRAO PRETO, RIBEIRAO PRETO - SP, 14031260",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "23954",
+    "escola": "EE João Augusto de Mello Prof",
+    "endereco": "LASAR SEGALL, 228 - JARDIM INDEPENDENCIA, RIBEIRAO PRETO - SP, 14076330",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "24272",
+    "escola": "EE João de Souza Campos Cel",
+    "endereco": "FAGUNDES, 153 - CENTRO, CRAVINHOS - SP, 14140000",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "900758",
+    "escola": "EE João Palma Guião Dr",
+    "endereco": "ATTILIO PEDRO CHERUBIM, 275 - DOM BERNARDO JOSE MIELLE, RIBEIRAO PRETO - SP, 14057310",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "24193",
+    "escola": "EE João Rodrigues Guião Dr",
+    "endereco": "TREZE DE MAIO, 266 - JARDIM PAULISTA, RIBEIRAO PRETO - SP, 14090260",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "22962",
+    "escola": "EE Joaquim A Ferreira Monsenhor",
+    "endereco": "PADRE CLARET, 141 - CASTELO, BATATAIS - SP, 14300194",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "918167",
+    "escola": "EE Jorge Rodini Luiz Prof",
+    "endereco": "LUIZ AUGUSTO VELLUDO, 215 - JARDIM JOAQUIM PROCOPIO ARAUJO FERRAZ, RIBEIRAO PRETO - SP, 14065530",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "23838",
+    "escola": "EE José Aleixo das S Passos Cel",
+    "endereco": "JOSE DE MELLO, 221 - VILA NOSSA SENHORA  APARECIDA, BRODOWSKI - SP, 14340000",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "903474",
+    "escola": "EE José Bompani Vereador",
+    "endereco": "JOAO GUAL, 195 - VALENTINA FIGUEIREDO, RIBEIRAO PRETO - SP, 14061670",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "23991",
+    "escola": "EE José Costa Deputado",
+    "endereco": "DOS ESTUDANTES, 189 - CENTRO, SERRANA - SP, 14150000",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "23875",
+    "escola": "EE José Lima Pedreira Freitas Prof",
+    "endereco": "VISCONDE DE INHOMIRIN, 830 - VILA VIRGINIA, RIBEIRAO PRETO - SP, 14030490",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "576475",
+    "escola": "EE Jovem Felipe Gui Rocha",
+    "endereco": "VIRGILIO BUENO, SN - PARQUE DOS FLAMBOYANS, RIBEIRAO PRETO - SP, 14093631",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "925697",
+    "escola": "EE Julieta Fernada Sousa Taranto",
+    "endereco": "JOAQUIM PERES, 100 - JARDIM MARCHESI, RIBEIRAO PRETO - SP, 14031329",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "23036",
+    "escola": "EE Conego Macano de Almerіа",
+    "endereco": "FRANCISCO ANTONIO MAFRA, 1392 - CENTRO, SANTO ANTONIO DA ALEGRIA - SP, 14390000",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "919433",
+    "escola": "EE Maria V Mansur Biagi Prof",
+    "endereco": "JOSE ZANELLA, 195 - SANTA CRUZ, BATATAIS - SP, 14305042",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "24053",
+    "escola": "EE Meira Júnior Dr",
+    "endereco": "JULIO DE MESQUITA, 282 - VILA VIRGINIA, RIBEIRAO PRETO - SP, 14030450",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "24200",
+    "escola": "EE Messias da Fonseca Dr",
+    "endereco": "DOUTOR HOFEZ ZACHARIAS BEIHY, 143 - CENTRO, CAJURU - SP, 14240000",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "900771",
+    "escola": "EE Miguel Jorge",
+    "endereco": "DOMINGOS PADOVAN, 790 - JARDIM NOVO MUNDO, RIBEIRAO PRETO - SP, 14092040",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "350643",
+    "escola": "EE Neusa Maria do Bem",
+    "endereco": "BENEDITO CARLOS DOS SANTOS, 87 - JARDIM DAS ROSAS II, SERRANA - SP, 14150000",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "900746",
+    "escola": "EE Orlando Jurca Deputado",
+    "endereco": "LUIZ CARVALHO PEREIRA, 350 - ADELINO SIMIONI, RIBEIRAO PRETO - SP, 14071310",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "44647",
+    "escola": "EE Orlando Vitaliano Vereador",
+    "endereco": "CESAR MONTAGNANA, 110 - QUINTINO FACCI I, RIBEIRAO PRETO - SP, 14077180",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "44659",
+    "escola": "EE Oscar de M Lacerda Prof Dr",
+    "endereco": "MAGID SIMAO TRAD, 230 - ADELINO SIMIONI, RIBEIRAO PRETO - SP, 14071010",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "24119",
+    "escola": "EE Otoniel Mota",
+    "endereco": "PRUDENTE DE MORAIS, 764 - CENTRO, RIBEIRAO PRETO - SP, 14015100",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "925706",
+    "escola": "EE Parque dos Servidores",
+    "endereco": "ANTONIO TEIXEIRA DUARTE, SN - RESIDENCIAL PARQUE DOS SERVIDORES, RIBEIRAO PRETO - SP, 14094224",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "925718",
+    "escola": "EE Divo Marino Prof",
+    "endereco": "ALFREDO CALIXTO, 35 - PORTAL DO ALTO, RIBEIRAO PRETO - SP, 14056640",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "925664",
+    "escola": "EE Lauro Bigelli Prof",
+    "endereco": "BERTHA LUTZ, 200 - DOM BERNARDO JOSE MIELLE, RIBEIRAO PRETO - SP, 14057280",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "435065",
+    "escola": "EE Paulo Cesar Camiel Giovannetti",
+    "endereco": "SENADOR TEOTONIO VILELLA, 1950 - JARDIM PAIVA II, RIBEIRAO PRETO - SP, 14056772",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "576487",
+    "escola": "EE Nair Guilhermina P Nogueira Prof",
+    "endereco": "ORESTES LOPES DE CAMARGO, 1180 - JARDIM JOQUEI CLUBE, RIBEIRAO PRETO - SP, 14078580",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "412181",
+    "escola": "EE Sueli Terezinha Dahone Pro",
+    "endereco": "GREGORIO PEREIRA, 50 - JARDIM ORESTES LOPES DE CAMARGO, RIBEIRAO PRETO - SP, 14066440",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "42870",
+    "escola": "EE Rafael Leme Franco Prof:",
+    "endereco": "PADRE ANCHIETA, 1730 - JARDIM ANTARTICA, RIBEIRAO PRETO - SP, 14051220",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "24211",
+    "escola": "EE Rita Ferraz Caselli",
+    "endereco": "HORACIO ROBERTO DO NASCIMENTO, 738 - CENTRO, SANTA CRUZ DA ESPERANCA - SP, 14250000",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "912086",
+    "escola": "EE Dom Romeu Alberti",
+    "endereco": "FLORINDA BORDIZAN SAMPAIO, 250 - JARDIM JOSE SAMPAIO JUNIOR, RIBEIRAO PRETO - SP, 14065060",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "42882",
+    "escola": "EE Romualdo M de Barros",
+    "endereco": "BOLIVIA, 300 - VILA MARIANA, RIBEIRAO PRETO - SP, 14075250",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "911306",
+    "escola": "EE Rosangela Basile Prof",
+    "endereco": "SAMUEL MARTINELLI, 450 - PARQUE RIBEIRAO PRETO, RIBEIRAO PRETO - SP, 14031500",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "23942",
+    "escola": "EE Ruben Claudio Moreira Prof",
+    "endereco": "PARANAGUA, 367 - VILA ALBERTINA, RIBEIRAO PRETO - SP, 14060100",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "48458",
+    "escola": "EE Salustiano Lemos",
+    "endereco": "JOSE GARCIA DE ABREU, 1 - LILIANA URTIAGA ANDREAZZA, SANTA ROSA DE VITERBO - SP, 14270000",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "24077",
+    "escola": "EE Sebastião F Palma Prof",
+    "endereco": "CASEMIRO DE ABREU, 595 - VILA SEIXAS, RIBEIRAO PRETO - SP, 14020060",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "85397",
+    "escola": "EE Serra Azul",
+    "endereco": "EGYDIO FIDENCIO ZANIRATO, 237 - JARDIM MONTE AZUL, SERRA AZUL - SP, 14230000",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "22925",
+    "escola": "EE Silvio de Almeida",
+    "endereco": "CORONEL JOAQUIM ALVES, 1438 - RIACHUELO, BATATAIS - SP, 14315430",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "24235",
+    "escola": "EE Simão da Silva",
+    "endereco": "DA MATRIZ, 469 - CENTRO, SAO SIMAO - SP, 14200000",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "23929",
+    "escola": "EE Sinhà Junqueira Dona",
+    "endereco": "CONSELHEIRO DANTAS, 358 - VILA TIBERIO, RIBEIRAO PRETO - SP, 14050400",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "925688",
+    "escola": "EE Socrates Brasileiro",
+    "endereco": "JOAO DAQUIL BICHUETTE, 300 - JARDIM PAIVA I, RIBEIRAO PRETO - SP, 14056774",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "24302",
+    "escola": "EE Teófilo Siqueira",
+    "endereco": "RIO BRANCO, 135 - CENTRO, SANTA ROSA DE VITERBO - SP, 14270000",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "36869",
+    "escola": "EE Veiga de Miranda Ministro",
+    "endereco": "ONZE DE AGOSTO, 2480 - CAMPOS ELISEOS, RIBEIRAO PRETO - SP, 14085030",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "576499",
+    "escola": "EE VereadorJosé Velloni ",
+    "endereco": "JOSE FRANCISCO DA SILVA, SN - JARDIM MONTE CARLO, RIBEIRAO PRETO - SP, 14031866",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "24326",
+    "escola": "EE Verginio Mellons",
+    "endereco": "PRESIDENTE VARGAS, 301 - JARDIM BOA VISTA, SANTA ROSA DE VITERBO - SP, 14270000",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "907873",
+    "escola": "EE Vicente T de Souza Prof",
+    "endereco": "JORGE DE LIMA, 660 - JARDIM MARIA GORETTI, RIBEIRAO PRETO - SP, 14030320",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "24259",
+    "escola": "EE Virgilio Garcia Capitão",
+    "endereco": "SANTA RITA, 665 - CENTRO, SAO SIMAO - SP, 14200000",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "23887",
+    "escola": "EE Walter Ferreira Prof",
+    "endereco": "MACHADO DE ASSIS, 761 - VILA TIBERIO, RIBEIRAO PRETO - SP, 14050490",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "49612",
+    "escola": "EE Walter Paiva Prof",
+    "endereco": "TUPINAMBA, SN - IPIRANGA, RIBEIRAO PRETO - SP, 14060630",
+    "sala": "Sala Geral"
+  },
+  {
+    "cie": "22949",
+    "escola": "EE Washington Luiz De",
+    "endereco": "DOUTOR CHIQUINHO ARANTES, 397 - CENTRO, BATATAIS - SP, 14300075",
+    "sala": "Sala Geral"
   }
 ]

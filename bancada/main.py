@@ -30,11 +30,13 @@ from datetime import datetime, timezone
 
 import arduino
 import firebase_client as fb
+import higienizacao
 import leitor_hardware as hw
 import prever_risco
 
 DIR = os.path.dirname(os.path.abspath(__file__))
 CONFIG = os.path.join(DIR, "config.json")
+ARQUIVO_MACHINE_ID = os.path.join(DIR, ".machine_id")
 
 C_VERDE = "\033[92m"
 C_AMAR = "\033[93m"
@@ -47,7 +49,7 @@ COR_FAIXA = {"OK": C_VERDE, "ATENCAO": C_AMAR, "CRITICO": C_VERM,
 
 
 def carregar_config():
-    padrao = {"id_bancada": "URE-01-BANCADA-01", "ure": "URE Exemplo",
+    padrao = {"id_bancada": "URE-01-BANCADA-01", "ure": "Ribeirão Preto",
               "porta_serial": None, "operador": "tecnico"}
     if os.path.exists(CONFIG):
         with open(CONFIG, encoding="utf-8") as f:
@@ -122,7 +124,7 @@ def executar_ciclo(cfg, banca, simular=False):
     inv = hw.coletar_tudo()
     disco = inv["disco"]
 
-    # Cadeia de identificacao: BIOS -> placa-mae -> disco -> UUID fallback.
+    # Cadeia de identificacao: BIOS -> placa-mae -> disco -> ID persistente local / fallback.
     # PC montado (sem fabricante OEM) quase sempre cai para placa-mae ou disco.
     serial = inv["serial_bios"]
     origem = inv.get("origem_serial") or ""
@@ -131,9 +133,25 @@ def executar_ciclo(cfg, banca, simular=False):
         origem = "disco"
 
     if not serial:
-        serial = f"UUID-{uuid.uuid4().hex[:12].upper()}"
-        origem = "UUID (fallback)"
-        print(f"{C_AMAR}      [AVISO] Nenhum serial de hardware valido. Gerado fallback: {serial}{C_OFF}")
+        # Tenta carregar ID persistente local para evitar duplicidade em maquinas sem serial
+        if os.path.exists(ARQUIVO_MACHINE_ID):
+            try:
+                with open(ARQUIVO_MACHINE_ID, encoding="utf-8") as f:
+                    data = json.load(f)
+                    serial = data.get("serial", "")
+                    origem = data.get("origem", "ID Persistente Local")
+            except Exception:
+                pass
+
+        if not serial:
+            serial = f"UUID-{uuid.uuid4().hex[:12].upper()}"
+            origem = "UUID (fallback gerado)"
+            try:
+                with open(ARQUIVO_MACHINE_ID, "w", encoding="utf-8") as f:
+                    json.dump({"serial": serial, "origem": origem}, f)
+            except Exception:
+                pass
+            print(f"{C_AMAR}      [AVISO] Nenhum serial valido. Gerado e salvo ID persistente local: {serial}{C_OFF}")
 
     print(f"      Serial      : {serial}  ({origem})")
     print(f"      Modelo      : {inv['fabricante']} {inv['modelo_pc']}")
@@ -234,6 +252,9 @@ def executar_ciclo(cfg, banca, simular=False):
         "sala": sala,
         "ambiente": sala,
     }
+
+    # Aplicar modulo unificado de higienizacao e padronizacao
+    registro = higienizacao.higienizar_registro(registro)
 
     if simular:
         print(f"{C_CINZA}      Modo simulacao - nada enviado. Registro:{C_OFF}")
