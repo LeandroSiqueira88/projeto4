@@ -10,31 +10,25 @@ Saidas:
 
 Uso:
   python gerar_dataset.py
-  python gerar_dataset.py --discos 5000 --dias 120 --seed 42
-
-Por que sintetico: permite construir e testar todo o pipeline (script da bancada,
-treino, Firebase, Flutter) sem depender do download de ~10 GB do Backblaze.
-O schema e identico, entao trocar por dado real depois e so trocar o arquivo.
+  python gerar_dataset.py --discos 500 --dias 120 --seed 42
 """
 
 import argparse
+import json
 import os
 from datetime import date, timedelta
 
 import numpy as np
 import pandas as pd
 
-# Familias de disco com taxa de falha base diferente (espelha o mundo real:
-# certos modelos falham muito mais que outros)
 MODELOS = [
-    # (modelo, capacidade_bytes, peso_no_parque, taxa_falha_anual)
-    ("ST500LM012 HN",   500_107_862_016, 0.22, 0.145),  # notebook 5400rpm, ruim
+    ("ST500LM012 HN",   500_107_862_016, 0.22, 0.145),
     ("WDC WD5000AAKX",  500_107_862_016, 0.18, 0.061),
     ("ST1000DM003",   1_000_204_886_016, 0.20, 0.098),
     ("HGST HTS541010", 1_000_204_886_016, 0.12, 0.035),
     ("TOSHIBA DT01ACA", 1_000_204_886_016, 0.10, 0.072),
-    ("Kingston SA400S37", 480_103_981_056, 0.10, 0.018),  # SSD, bem melhor
-    ("WDC WDS240G2G0A",  240_057_409_536, 0.08, 0.021),  # SSD
+    ("Kingston SA400S37", 480_103_981_056, 0.10, 0.018),
+    ("WDC WDS240G2G0A",  240_057_409_536, 0.08, 0.021),
 ]
 
 CPUS = [
@@ -44,27 +38,29 @@ CPUS = [
     ("Intel Celeron J1800", 2, 2, 2.41), ("Intel Core i5-8400", 6, 6, 2.80),
 ]
 
-ESCOLAS = [
-    "EE Prof. Joao Batista", "EE Monteiro Lobato", "EE Cecilia Meireles",
-    "EE Anisio Teixeira", "EE Paulo Freire", "EE Carlos Drummond",
-    "EE Rachel de Queiroz", "EE Mario de Andrade", "EE Cora Coralina",
-    "EE Darcy Ribeiro", "EE Milton Santos", "EE Zilda Arns",
-]
-
-SALAS = ["Laboratorio 1", "Laboratorio 2", "Secretaria", "Sala dos Professores",
-         "Diretoria", "Biblioteca", "Sala de Leitura"]
-
 
 def _serial(rng, prefixo, n=8):
     alfabeto = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
     return prefixo + "".join(rng.choice(list(alfabeto), size=n))
 
 
-def gerar(n_discos=5000, n_dias=120, seed=42):
+def gerar(n_discos=500, n_dias=120, seed=42):
     rng = np.random.default_rng(seed)
     data_fim = date.today()
     data_ini = data_fim - timedelta(days=n_dias - 1)
     datas = [data_ini + timedelta(days=i) for i in range(n_dias)]
+
+    # Carregar escolas de bancada/escolas.json (5 maquinas por escola)
+    escolas_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "bancada", "escolas.json")
+    lista_escolas = []
+    if os.path.exists(escolas_path):
+        with open(escolas_path, encoding="utf-8") as f:
+            escolas_raw = json.load(f)
+            # 100 escolas x 5 maquinas = 500 maquinas
+            lista_escolas = escolas_raw[: max(1, n_discos // 5)]
+
+    if not lista_escolas:
+        lista_escolas = [{"escola": "EE Exemplo", "sala": "Laboratorio 1", "cie": "999000"}]
 
     pesos = np.array([m[2] for m in MODELOS], dtype=float)
     pesos /= pesos.sum()
@@ -80,20 +76,16 @@ def gerar(n_discos=5000, n_dias=120, seed=42):
         serial_disco = _serial(rng, "S")
         serial_bios = _serial(rng, "BR", 9)
 
-        # idade do disco no inicio da janela (horas ligado)
         idade_anos = rng.gamma(shape=2.6, scale=1.5)
         idade_anos = float(np.clip(idade_anos, 0.05, 11.0))
-        horas_ini = idade_anos * 365 * 24 * rng.uniform(0.28, 0.55)  # nem sempre ligado
+        horas_ini = idade_anos * 365 * 24 * rng.uniform(0.28, 0.55)
 
-        # o disco falha dentro da janela?
-        # risco sobe com idade (banheira: sobe forte depois de ~4 anos)
         mult_idade = 1.0 + max(0.0, idade_anos - 3.5) ** 1.7 * 0.55
         p_falha_janela = 1 - np.exp(-taxa_anual * mult_idade * (n_dias / 365.0))
         vai_falhar = rng.random() < p_falha_janela
 
         if vai_falhar:
             dia_falha = int(rng.integers(int(n_dias * 0.20), n_dias))
-            # degradacao comeca antes da falha (janela variavel = realismo)
             dur_degrad = int(np.clip(rng.gamma(3.0, 9.0), 3, 75))
             dia_degrad = max(0, dia_falha - dur_degrad)
         else:
@@ -101,12 +93,11 @@ def gerar(n_discos=5000, n_dias=120, seed=42):
             dia_degrad = None
             dur_degrad = None
 
-        # estado basal de contadores (disco velho ja tem alguma sujeira)
         base_5 = int(rng.poisson(0.7 * mult_idade)) if not eh_ssd else 0
         base_197 = 0
         base_187 = int(rng.poisson(0.25 * mult_idade)) if not eh_ssd else 0
         base_198 = 0
-        base_199 = int(rng.poisson(0.5))  # erro de cabo, independe de saude
+        base_199 = int(rng.poisson(0.5))
         base_188 = int(rng.poisson(0.3 * mult_idade)) if not eh_ssd else 0
         ciclos_ini = int(horas_ini / rng.uniform(5.5, 11.0))
         lbas_ini = float(horas_ini * rng.uniform(1.2e6, 6.0e6))
@@ -117,13 +108,10 @@ def gerar(n_discos=5000, n_dias=120, seed=42):
         dia_fim_disco = dia_falha if dia_falha is not None else n_dias - 1
 
         for d in range(dia_fim_disco + 1):
-            ligado_hoje = rng.random() < 0.72  # PC de escola nao liga fim de semana
-            horas_dia = rng.uniform(4, 10) if ligado_hoje else 0.0
-            horas = horas_ini + sum([0]) + d * 6.8  # aproximacao acumulada
+            ligado_hoje = rng.random() < 0.72
             horas = horas_ini + d * rng.uniform(4.5, 7.5) if ligado_hoje else horas_ini + d * 5.0
 
             if dia_degrad is not None and d >= dia_degrad:
-                # progressao da degradacao: 0 -> 1
                 prog = (d - dia_degrad) / max(1, (dia_falha - dia_degrad))
                 prog = float(np.clip(prog, 0, 1))
                 if eh_ssd:
@@ -137,7 +125,6 @@ def gerar(n_discos=5000, n_dias=120, seed=42):
                     s188 += rng.poisson(0.2 + 5 * prog ** 1.8)
                 temp = temp_base + 4.5 * prog + rng.normal(0, 1.6)
             else:
-                # disco saudavel: ruido baixo, ocasional
                 if not eh_ssd and rng.random() < 0.012:
                     s5 += rng.poisson(1)
                 if rng.random() < 0.010:
@@ -166,12 +153,18 @@ def gerar(n_discos=5000, n_dias=120, seed=42):
                 float(lbas_ini + d * rng.uniform(0.8e6, 5.0e6)),
             ))
 
+        escola_obj = lista_escolas[(i // 5) % len(lista_escolas)]
+        escola_nome = escola_obj.get("escola", "Escola Exemplo")
+        sala_nome = escola_obj.get("sala", "Laboratorio 1")
+        cie_escola = escola_obj.get("cie", "000000")
+
         cpu, cores, threads, freq = CPUS[rng.integers(len(CPUS))]
         maquinas.append((
             serial_bios,
             serial_disco,
-            ESCOLAS[rng.integers(len(ESCOLAS))],
-            SALAS[rng.integers(len(SALAS))],
+            escola_nome,
+            sala_nome,
+            cie_escola,
             f"Dell OptiPlex {rng.choice(['3020','3040','7010','9020'])}",
             cpu, int(cores), int(threads), float(freq),
             int(rng.choice([2, 4, 4, 8, 8, 16], p=[.12, .28, .18, .22, .12, .08])),
@@ -185,20 +178,13 @@ def gerar(n_discos=5000, n_dias=120, seed=42):
 
     df = pd.DataFrame(linhas, columns=[
         "date", "serial_number", "model", "capacity_bytes", "failure",
-        "smart_5_raw",    # setores realocados
-        "smart_9_raw",    # horas ligado
-        "smart_12_raw",   # ciclos de energia
-        "smart_187_raw",  # erros reportados nao corrigiveis
-        "smart_188_raw",  # command timeout
-        "smart_194_raw",  # temperatura (C)
-        "smart_197_raw",  # setores pendentes
-        "smart_198_raw",  # setores incorrigiveis offline
-        "smart_199_raw",  # erro CRC UDMA (cabo)
-        "smart_241_raw",  # LBAs escritos
+        "smart_5_raw", "smart_9_raw", "smart_12_raw", "smart_187_raw",
+        "smart_188_raw", "smart_194_raw", "smart_197_raw", "smart_198_raw",
+        "smart_199_raw", "smart_241_raw",
     ])
 
     dfm = pd.DataFrame(maquinas, columns=[
-        "serial_bios", "serial_disco", "escola", "sala", "modelo_pc",
+        "serial_bios", "serial_disco", "escola", "sala", "cie", "modelo_pc",
         "cpu", "cpu_cores", "cpu_threads", "cpu_freq_ghz",
         "ram_gb", "ram_pentes", "modelo_disco", "capacidade_bytes",
         "tipo_disco", "idade_anos", "status",
@@ -209,13 +195,12 @@ def gerar(n_discos=5000, n_dias=120, seed=42):
 
 def main():
     p = argparse.ArgumentParser()
-    p.add_argument("--discos", type=int, default=5000)
+    p.add_argument("--discos", type=int, default=500)
     p.add_argument("--dias", type=int, default=120)
     p.add_argument("--seed", type=int, default=42)
     p.add_argument("--saida", type=str, default=None)
     a = p.parse_args()
 
-    # caminho relativo ao proprio script: funciona de qualquer pasta
     if a.saida is None:
         a.saida = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 
@@ -230,7 +215,6 @@ def main():
     n_falhas = int(df["failure"].sum())
     print(f"telemetria : {len(df):,} linhas | {df['serial_number'].nunique():,} discos")
     print(f"falhas     : {n_falhas:,} discos ({n_falhas/df['serial_number'].nunique()*100:.2f}% do parque)")
-    print(f"taxa linha : {n_falhas/len(df)*100:.4f}% das linhas tem failure=1")
     print(f"gravado    : {f_tel}")
     print(f"gravado    : {f_maq}")
 

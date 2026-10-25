@@ -97,23 +97,42 @@ def obter_vinculo_escola(serial, simular=False):
             return cie, escola, sala, "ativo"
 
     escolas = carregar_escolas()
-    cie_input = input("\n      >>> Digite o CIE da escola: ").strip()
+    while True:
+        cie_input = input("\n      >>> Digite o CIE da escola: ").strip()
+        if not cie_input:
+            print(f"{C_AMAR}      Por favor, digite um CIE valido.{C_OFF}")
+            continue
 
-    encontrada = next((e for e in escolas if e["cie"] == cie_input), None)
-    if encontrada:
-        cie = encontrada["cie"]
-        escola = encontrada["escola"]
-        sala_padrao = encontrada.get("sala") or encontrada.get("endereco", "Sala Geral")
-        sala = input(f"      Digite a Sala / Ambiente [{sala_padrao}]: ").strip() or sala_padrao
-        print(f"{C_VERDE}      Escola: {escola} | Ambiente/Sala: {sala}{C_OFF}")
-    else:
-        print(f"{C_AMAR}      CIE não encontrado. Digite o CIE, a escola e o ambiente/sala:{C_OFF}")
-        cie = input("      Digite o CIE: ").strip() or (cie_input if cie_input else "999999")
-        escola = input("      Digite o nome da Escola: ").strip() or "Escola Customizada"
-        sala = input("      Digite a Sala / Ambiente / Endereço: ").strip() or "Sala Geral"
-        print(f"{C_VERDE}      Vinculada a: {escola} (CIE {cie}) - {sala}{C_OFF}")
+        encontrada = next((e for e in escolas if e["cie"] == cie_input), None)
+        if encontrada:
+            cie = encontrada["cie"]
+            escola = encontrada["escola"]
+            sala_padrao = encontrada.get("sala") or encontrada.get("endereco", "Sala Geral")
+            sala = input(f"      Digite a Sala / Ambiente [{sala_padrao}]: ").strip() or sala_padrao
+            print(f"{C_VERDE}      Escola: {escola} | Ambiente/Sala: {sala}{C_OFF}")
+            return cie, escola, sala, "ativo"
+        else:
+            print(f"{C_AMAR}      CIE não encontrado. Digite o CIE corretamente conforme a base de dados cadastrada ou cadastre um novo CIE informando o nome da escola e o endereço.{C_OFF}")
+            opcao = input("      Deseja tentar digitar novamente (T) ou cadastrar uma nova escola (C)? [T/c]: ").strip().lower()
+            if opcao == "c":
+                cie = input("      Digite o CIE: ").strip() or cie_input
+                escola = input("      Digite o nome da Escola: ").strip() or "Escola Customizada"
+                endereco = input("      Digite o Endereço: ").strip() or "Endereço não informado"
+                sala = input("      Digite a Sala / Ambiente [Sala Geral]: ").strip() or "Sala Geral"
 
-    return cie, escola, sala, "ativo"
+                nova_escola = {"cie": cie, "escola": escola, "endereco": endereco, "sala": sala}
+                escolas.append(nova_escola)
+                try:
+                    with open(ARQUIVO_ESCOLAS, "w", encoding="utf-8") as f:
+                        json.dump(escolas, f, indent=2, ensure_ascii=False)
+                    print(f"{C_VERDE}      Escola cadastrada com sucesso na base local!{C_OFF}")
+                except Exception as e:
+                    print(f"{C_AMAR}      Aviso: nao foi possivel salvar no arquivo local ({e}){C_OFF}")
+
+                print(f"{C_VERDE}      Vinculada a: {escola} (CIE {cie}) - {sala}{C_OFF}")
+                return cie, escola, sala, "ativo"
+            else:
+                continue
 
 
 def executar_ciclo(cfg, banca, simular=False):

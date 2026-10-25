@@ -198,6 +198,19 @@ def ler_disco():
             if not disco["motivo"] or disco["motivo"].startswith("smartctl"):
                 disco["motivo"] = f"WMI indisponivel: {e}"
 
+    # Adicionar uso de espaco em disco (C: ou raiz)
+    try:
+        usage = shutil.disk_usage("C:\\" if SISTEMA == "Windows" else "/")
+        disco["espaco_total_gb"] = round(usage.total / (1024**3), 2)
+        disco["espaco_livre_gb"] = round(usage.free / (1024**3), 2)
+        disco["espaco_usado_gb"] = round(usage.used / (1024**3), 2)
+        disco["uso_disco_pct"] = round((usage.used / usage.total) * 100, 1) if usage.total > 0 else 0.0
+    except:
+        disco["espaco_total_gb"] = 0.0
+        disco["espaco_livre_gb"] = 0.0
+        disco["espaco_usado_gb"] = 0.0
+        disco["uso_disco_pct"] = 0.0
+
     return disco
 
 def coletar_tudo():
